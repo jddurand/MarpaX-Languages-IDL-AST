@@ -22,6 +22,13 @@ sub new {
   return $self;
 }
 
+sub parse {
+    my ($self, $datap) = @_;
+
+    my $recce = Marpa::R2::Scanless::R->new({grammar => $G, trace_terminals => 1});
+    $recce->read($datap);
+}
+
 =head1 NOTES
 
 IDL version is 3.5 as of L<OMG IDL3.5 Specification|http://www.omg.org/spec/IDL35/3.5/>.
@@ -51,8 +58,8 @@ __DATA__
 <interface>                  ::= <interface_dcl>
                              |   <forward_dcl>
 <interface_dcl>              ::= <interface_header> '{' <interface_body> '}'
-<forward_dcl>                ::= <abstract or local> 'interface' <identifier>
-<interface_header>           ::= <abstract or local> 'interface' <identifier> <interface_inheritance_spec maybe>
+<forward_dcl>                ::= <abstract or local maybe> 'interface' <identifier>
+<interface_header>           ::= <abstract or local maybe> 'interface' <identifier> <interface_inheritance_spec maybe>
 <interface_body>             ::= <export>*
 <export>                     ::= <type_dcl> ';'
                              |   <const_dcl> ';'
@@ -298,6 +305,8 @@ __DATA__
 <import any> ::= <import>*
 <definition many> ::= <definition>+
 <abstract or local> ::= 'abstract' | 'local'
+<abstract or local maybe> ::= <abstract or local>
+<abstract or local maybe> ::=
 <interface_inheritance_spec maybe> ::= <interface_inheritance_spec>
 <interface_inheritance_spec maybe> ::=
 <interface_name list many> ::= <interface_name>+ separator => <comma>
@@ -373,7 +382,7 @@ I_CONSTANT_INSIDE ~ ES
 I_CONSTANT_INSIDE_many ~ I_CONSTANT_INSIDE+
 
 <identifier> ::= IDENTIFIER
-:lexeme ~ <IDENTIFIER>
+:lexeme ~ <IDENTIFIER> priority => -1
 
 IDENTIFIER          ~ L A_any
 
@@ -452,5 +461,46 @@ ES_AFTERBS ~ [\'\"\?\\abfnrtv]
 ES         ~ BS ES_AFTERBS
 WS         ~ [ \t\v\n\f]
 WS_any     ~ WS*
+WS_many    ~ WS+
 QUOTE     ~ [']
 BS        ~ '\'
+
+#
+# discards of the C language
+#
+############################################################################
+# Discard of a C comment, c.f. https://gist.github.com/jeffreykegler/5015057
+############################################################################
+<C style comment> ~ '/*' <comment interior> '*/'
+<comment interior> ~
+    <optional non stars>
+    <optional star prefixed segments>
+    <optional pre final stars>
+<optional non stars> ~ [^*]*
+<optional star prefixed segments> ~ <star prefixed segment>*
+<star prefixed segment> ~ <stars> [^/*] <optional star free text>
+<stars> ~ [*]+
+<optional star free text> ~ [^*]*
+<optional pre final stars> ~ [*]*
+:discard ~ <C style comment>
+
+##########################
+# Discard of a C++ comment
+##########################
+<Cplusplus style comment> ~ '//' <Cplusplus comment interior>
+<Cplusplus comment interior> ~ [^\n]*
+:discard ~ <Cplusplus style comment>
+
+###########################
+# TAKE CARE: preprocessor commands are IGNORED in this version
+# Discard of a Perl comment
+###########################
+<Perl style comment> ~ '#' <Perl comment interior>
+<Perl comment interior> ~ [^\n]*
+:discard ~ <Perl style comment>
+
+####################
+# WhiteSpace discard
+####################
+:discard ~ WS_many       # whitespace separates tokens
+
