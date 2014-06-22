@@ -1,7 +1,7 @@
 use strict;
 use warnings FATAL => 'all';
 
-package MarpaX::Languages::C::AST;
+package MarpaX::Languages::IDL::AST;
 
 # ABSTRACT: Translate an IDL source to an AST
 
@@ -18,8 +18,6 @@ sub new {
   };
 
   bless($self, $class);
-
-  $self->_init();
 
   return $self;
 }
