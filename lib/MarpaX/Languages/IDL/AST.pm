@@ -25,7 +25,9 @@ sub new {
 sub parse {
     my ($self, $datap) = @_;
 
-    my $recce = Marpa::R2::Scanless::R->new({grammar => $G, trace_terminals => 1});
+    my $recce = Marpa::R2::Scanless::R->new({grammar => $G,
+                                            # trace_terminals => 1
+                                            });
     $recce->read($datap);
 }
 
@@ -358,7 +360,6 @@ __DATA__
 <primary_key_spec maybe> ::=
 <home_export any> ::= <home_export>*
 <comma> ::= ','
-<wide_string_literal> ::= 'L' <string_literal>
 
 
 #
@@ -370,6 +371,10 @@ STRING_LITERAL_INSIDE ~ [^"\\\n]
 STRING_LITERAL_INSIDE ~ ES
 STRING_LITERAL_INSIDE_any ~ STRING_LITERAL_INSIDE*
 STRING_LITERAL_UNIT ~ SP_maybe '"' STRING_LITERAL_INSIDE_any '"' WS_any
+
+<wide_string_literal> ::= WIDE_STRING_LITERAL_UNIT+
+:lexeme ~ <WIDE_STRING_LITERAL_UNIT>
+WIDE_STRING_LITERAL_UNIT ~ SP_maybe 'L"' STRING_LITERAL_INSIDE_any '"' WS_any
 
 <integer_literal> ::= I_CONSTANT
 :lexeme ~ <I_CONSTANT>
@@ -393,6 +398,10 @@ IDENTIFIER          ~ L A_any
 :lexeme ~ <CHARACTER_LITERAL>
 CHARACTER_LITERAL ~ CP_maybe QUOTE I_CONSTANT_INSIDE_many QUOTE
 
+<wide_character_literal> ::= WIDE_CHARACTER_LITERAL
+:lexeme ~ <WIDE_CHARACTER_LITERAL>
+WIDE_CHARACTER_LITERAL ~ 'L' QUOTE I_CONSTANT_INSIDE_many QUOTE
+
 dD ~ [dD]
 <fixed_pt_literal> ::= FIXED_PT_LITERAL
 :lexeme ~ <FIXED_PT_LITERAL>
@@ -400,7 +409,6 @@ FIXED_PT_LITERAL ~ D_many '.' D_many dD
                  |        '.' D_many dD
                  | D_many '.'        dD
 
-<wide_character_literal> ::= 'L' <character_literal>
 <floating_pt_literal> ::= F_CONSTANT
 :lexeme ~ <F_CONSTANT>
 F_CONSTANT ~ D_many E FS_maybe
@@ -447,7 +455,7 @@ U_maybe    ~
 IS         ~ U LL_maybe | LL U_maybe
 IS_maybe   ~ IS
 IS_maybe   ~
-CP         ~ [uUL]
+CP         ~ [uU]    # L extracted - c.f. WIDE_CHARACTER_LITERAL
 CP_maybe   ~ CP
 CP_maybe   ~
 SP         ~ 'u8' | [uUL]
