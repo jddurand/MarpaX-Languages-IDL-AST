@@ -1,8 +1,7 @@
 #!perl -T
 use strict;
 use warnings FATAL => 'all';
-use Test::More tests => 1;
-use Data::Dumper;
+use Test::More tests => 2;
 
 our $DATA = do {local $/; <DATA>};
 
@@ -11,7 +10,7 @@ BEGIN {
 }
 
 my $ast = MarpaX::Languages::IDL::AST->new()->ast(\$DATA);
-print STDERR Dumper($ast);
+ok(defined($ast), 'DOM.idl provides a defined unique AST');
 
 __DATA__
 /*
