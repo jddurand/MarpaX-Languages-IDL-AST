@@ -2,6 +2,7 @@
 use strict;
 use warnings FATAL => 'all';
 use Test::More tests => 1;
+use Data::Dumper;
 
 our $DATA = do {local $/; <DATA>};
 
@@ -9,8 +10,8 @@ BEGIN {
     use_ok( 'MarpaX::Languages::IDL::AST' ) || print "Bail out!\n";
 }
 
-my $idl2ast = MarpaX::Languages::IDL::AST->new();
-$idl2ast->parse(\$DATA);
+my $ast = MarpaX::Languages::IDL::AST->new()->ast(\$DATA);
+print STDERR Dumper($ast);
 
 __DATA__
 /*
