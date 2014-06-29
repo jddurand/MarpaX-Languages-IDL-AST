@@ -296,7 +296,7 @@ module dom
     readonly attribute DocumentType     doctype;
     readonly attribute DOMImplementation  implementation;
     readonly attribute Element          documentElement;
-    Element            createElement(in DOMString tagName)
+    Element            createElement(in DOMString tagName, in DOMString tagName)
                                         raises(DOMException);
     DocumentFragment   createDocumentFragment();
     Text               createTextNode(in DOMString data);
