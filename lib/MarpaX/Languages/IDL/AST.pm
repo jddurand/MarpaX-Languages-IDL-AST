@@ -126,9 +126,10 @@ sub _ast {
 	    scopeTypeAndLcIdentifier => [
 		{
 		    scopeType => SCOPE_TYPE_ANY,
-		    scopeLcIdentifier => undef
+		    scopeLcIdentifier => undef,
+		    children => []                 # children is an array of {scopeTypeAndLcIdentifier => ..., lcIdentifiersPerScope => ...}
 		}
-		],    # One indice per scope, hash keys inside is scope type, value is scope name
+		],                                 # One indice per scope, hash keys inside is scope type, value is scope name
 	    lastIdentifier => '',
 	    lastScopeIdentifier => '',
 	    lastIdentifierGlobalName => '',
@@ -229,7 +230,7 @@ sub _doEvents {
 	    #
 	    # Add scope information
 	    #
-	    $context->{curLcIdentifiersPerScope}->{$lcIdentifier}->{scope} = $context->{scopeNumber};
+	    $context->{curLcIdentifiersPerScope}->{$lcIdentifier}->{scopeNumber} = $context->{scopeNumber};
 	    #
 	    # Add global name information
 	    #
@@ -266,15 +267,14 @@ sub _doEvents {
 
 	    #
 	    # Per def, $scopeLcIdentifier must exist in $context->{lcIdentifiersPerScope} if it is defined
-	    # and does not particpate in collisions between identifiers
+	    # and does not participate in collisions between identifiers
 	    #
-	    push(@{$context->{scopeTypeAndLcIdentifier}}, { scopeType => $scopeType, scopeLcIdentifier => $scopeLcIdentifier });
+	    push(@{$context->{scopeTypeAndLcIdentifier}}, { scopeType => $scopeType, scopeLcIdentifier => $scopeLcIdentifier, children => [] });
 	    $context->{curScopeTypeAndLcIdentifier} = $context->{scopeTypeAndLcIdentifier}->[-1];
 	    if (defined($scopeLcIdentifier)) {
 		my $lcIdentifier = $scopeLcIdentifier->{lcIdentifier};
 		delete($context->{curLcIdentifiersPerScope}->{$lcIdentifier});
 	    }
-
 	    #
 	    # New scopes inherit previous scope identifiers and eventual module definitions within previous scope
 	    #
@@ -350,20 +350,36 @@ sub _doEvents {
 	# Prediction events
 	#
 	elsif ($eventName eq '^RCURLY_SCOPE' || $eventName eq '^RCURLY_MODULE_SCOPE' || $eventName eq '^RPAREN_SCOPE') {
+	    #
+	    # Spec says that closing of scope happens immediately BEFORE corresponding lexemes.
+	    # This is not a pb for us to do that just at lexeme pause after though -;
+	    #
 	    my $c = substr(${$datap}, $pos, 1);
 	    # print STDERR "\$c = $c\n";
 	    if ($c  eq '}' || $c eq ')') {
 		#
-		# Spec says that closing of scope happens immediately BEFORE corresponding lexemes.
-		# This is not a pb for us to do that just at lexeme pause after though -;
+		# Before popping, if we have a parent scope, we push the one being closed to the
+		# parent.
 		#
-		--$context->{scopeNumber};
+		if ($context->{scopeNumber} > 0) {
+		    my %inheritedLcIdentifiersPerScope = map {$_ => $context->{curLcIdentifiersPerScope}->{$_}} grep {$context->{curLcIdentifiersPerScope}->{$_}->{scopeNumber} < $context->{scopeNumber}} keys %{$context->{curLcIdentifiersPerScope}};
+		    my %definedLcIdentifiersPerScope = map {$_ => $context->{curLcIdentifiersPerScope}->{$_}} grep {$context->{curLcIdentifiersPerScope}->{$_}->{scopeNumber} == $context->{scopeNumber}} keys %{$context->{curLcIdentifiersPerScope}};
+		    
+		    push(@{$context->{scopeTypeAndLcIdentifier}->[$context->{scopeNumber} - 1]->{children}},
+			 {scopeTypeAndLcIdentifier => clone($context->{curScopeTypeAndLcIdentifier}),
+			  # lcIdentifiersPerScope => clone($context->{curLcIdentifiersPerScope}),
+			  inheritedLcIdentifiersPerScope => clone(\%inheritedLcIdentifiersPerScope),
+			  definedLcIdentifiersPerScope => clone(\%definedLcIdentifiersPerScope),
+			 }
+			);
+		}
+		pop(@{$context->{scopeTypeAndLcIdentifier}});
+		$context->{curScopeTypeAndLcIdentifier} = $context->{scopeTypeAndLcIdentifier}->[-1];
 
 		pop(@{$context->{lcIdentifiersPerScope}});
 		$context->{curLcIdentifiersPerScope} = $context->{lcIdentifiersPerScope}->[-1];
 
-		pop(@{$context->{scopeTypeAndLcIdentifier}});
-		$context->{curScopeTypeAndLcIdentifier} = $context->{scopeTypeAndLcIdentifier}->[-1];
+		--$context->{scopeNumber};
 
 		if ($eventName eq '^RCURLY_MODULE_SCOPE') {
 		    #
@@ -419,7 +435,7 @@ sub _checkIdentifierCollision {
     }
 
     if (exists($context->{curLcIdentifiersPerScope}->{$lcIdentifier}) &&
-	$context->{curLcIdentifiersPerScope}->{$lcIdentifier}->{scope} == $context->{scopeNumber}) {
+	$context->{curLcIdentifiersPerScope}->{$lcIdentifier}->{scopeNumber} == $context->{scopeNumber}) {
 	#
 	# The same lcIdentifier exist and has been defined in the same scope
 	#
