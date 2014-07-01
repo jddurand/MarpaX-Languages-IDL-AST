@@ -208,10 +208,19 @@ sub generate {
     my $ttOptionHashp = $targetOptionHashp->{tt};
     $ttOptionHashp->{INCLUDE_PATH} //= module_dir(__PACKAGE__);
     $ttOptionHashp->{INTERPOLATE} //= 1;
+    $ttOptionHashp->{RECURSION} //= 1;
 
     my $tt = Template->new($ttOptionHashp) || croak "$Template::ERROR";
 
-    $tt->process("$target.tt2") || croak $tt->error();
+    #
+    # The semantics for our TT templates is to provide a hash with
+    # a reference to a scratchpad hash (free to use) and the AST
+    #
+    my $vars = {scratchpad => {}, ast => $ast};
+    my $output = '';
+    $tt->process("$target.tt2", $vars, \$output) || croak $tt->error();
+
+    print STDERR "$output\n";
 
     return $self;
 }

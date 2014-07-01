@@ -1,4 +1,4 @@
-[% INCLUDE header %]
-This is a template defined in the __END__ section which is
-accessible via the DATA "file handle".
-[% INCLUDE footer %]
+[% USE ScalarUtil %]
+[% FOREACH u IN ast %]
+       Got [% ScalarUtil.blessed(u) %]
+[% END %]

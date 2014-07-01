@@ -3,6 +3,12 @@ use strict;
 use warnings FATAL => 'all';
 use Test::More tests => 2;
 use File::Temp;
+use FindBin;
+use Test::File::ShareDir
+  -root => "$FindBin::Bin/../",
+  -share => {
+             -module => { 'MarpaX::Languages::IDL::AST' => 'share' }
+  };
 
 our $DATA = do {local $/; <DATA>};
 my $tmp = File::Temp->new(UNLINK => 0, SUFFIX => '.idl' );
