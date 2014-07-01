@@ -5,6 +5,8 @@ package MarpaX::Languages::IDL::AST2;
 use MarpaX::Languages::IDL::AST::Value;
 use MarpaX::Languages::IDL::AST::Util;
 use Scalar::Util qw/blessed/;
+use Template;
+use File::ShareDir ':ALL';
 use constant {
   LEXEME_INDEX => 0
 };
@@ -108,10 +110,10 @@ sub parse {
     #
     # Parameters check
     #
-    if (defined($hashOptPtr) && ref($hashOptPtr) ne 'HASH') {
+    $hashOptPtr //= {};
+    if (ref($hashOptPtr) ne 'HASH') {
 	croak '3rd argument must be a pointer to HASH containing any Marpa::R2::Scanles::R option, except the grammar option';
     }
-    $hashOptPtr //= {};
     foreach (qw/grammar semantics_package/) {
       if (exists($hashOptPtr->{$_})) {
         delete($hashOptPtr->{$_});
@@ -148,12 +150,11 @@ sub parse {
     my $nextValue = $recce->value();
     croak 'Ambiguous AST' if (defined($nextValue));
     #
-    # Let's remember the AST and the data
+    # Let's remember the latest AST
     #
     $self->{_ast} = ${$value};
-    $self->{_data} = $data;
 
-    return $self->_validate();
+    return $self->generate();
 }
 
 =head2 $self->ast()
@@ -168,249 +169,49 @@ sub ast {
     return $self->{_ast};
 }
 
-=head2 $self->metaAst()
+=head2 $self->generate($ast, $target, $targetOptionHashp)
 
-Returns the latest meta AST produced by $self->parse().
+Generate files for the given AST $ast.
+
+=over
+
+=item $ast
+
+AST as produced by the method $self->parse(). Default to $self->ast().
+
+=item $target
+
+Target language. Default to 'perl'.
+Supported values are those distributed with this package, c.f. the target directory.
+
+=item $targetOptionHashp
+
+Hash reference of options specific to target $target.
+
+=back
+
+This method returns $self.
 
 =cut
 
-sub metaAst {
-    my ($self) = @_;
+sub generate {
+    my ($self, $ast, $target, $targetOptionHashp) = @_;
 
-    return $self->{_metaAst};
-}
+    $ast               //= $self->ast();
+    $target            //= 'perl';
+    $targetOptionHashp //= {};
 
-sub _validate {
-    my ($self) = @_;
-    #
-    # We build our compiled representation of the AST. This could go out-of-stack if the AST
-    # would be enormous. In practice, this is not the case. Nevertheless, OOTD, I'll may move
-    # to a stack-light implementation.
-    #
-    $self->{_metaAst} = {};
-    #
-    # I could have used perl's local keyword all over the place, but the setting of scope
-    # and root is dispatched sometimes on sub-rules. Since I do routines that match exactly
-    # the rule names, I therefore manage myself the variable in $self.
-    # Using local in addition can introduce truely vicious bugs if I am not very careful.
-    #
-    $self->{_root} = [];
-    $self->{_scope} = [];
-    $self->_specification($self->ast());
+    if (ref($targetOptionHashp) ne 'HASH') {
+	croak '3rd argument must be a pointer to HASH';
+    }
+
+    my $ttOptionHashp = $targetOptionHashp->{tt};
+    $ttOptionHashp->{INCLUDE_PATH} //= module_dir(__PACKAGE__);
+    $ttOptionHashp->{INTERPOLATE} //= 1;
+
+    my $tt = Template->new($ttOptionHashp) || croak "$Template::ERROR";
 
     return $self;
-}
-
-sub _pushRoot {
-  my ($self, $root) = @_;
-
-  push(@{$self->{_root}}, $root);
-
-  return $self;
-}
-
-sub _popRoot {
-  my ($self) = @_;
-
-  pop(@{$self->{_root}});
-
-  return $self;
-}
-
-sub _root {
-  my ($self, $root) = @_;
-
-  return join('::', @{$self->{_root}});
-}
-
-sub _pushScope {
-  my ($self, $scope) = @_;
-
-  push(@{$self->{_scope}}, $scope);
-
-  return $self;
-}
-
-sub _popScope {
-  my ($self) = @_;
-
-  pop(@{$self->{_scope}});
-
-  return $self;
-}
-
-sub _scope {
-  my ($self, $scope) = @_;
-
-  return join('::', @{$self->{_scope}});
-}
-
-sub _blessed {
-  my ($self, $p) = @_;
-
-  my $blessed = blessed($p) || '';
-  #
-  # ALL blessed arrays coming from us begin with ${BLESS_PACKAGE}::
-  #
-  $blessed =~ s/^${BLESS_PACKAGE}:://o;  # Ok, $BLESS_PACKAGE is a constant
-
-  return $blessed;
-}
-
-sub _specification {
-  my ($self, $specification) = @_;
-
-  print STDERR "$_[1]\n";
-
-  $self->_importAny($specification->[0]);
-  $self->_definitionMany($specification->[1]);
-
-  return $self;
-}
-
-sub _importAny {
-  my ($self, $importAny) = @_;
-
-  print STDERR "$_[1]\n";
-
-  map {$self->_import($_)} @{$importAny};
-
-  return $self;
-}
-
-sub _definitionMany {
-  my ($self, $definitionMany) = @_;
-
-  print STDERR "$_[1], current root: " . $self->_root . "\n";
-
-  map {$self->_definition($_)} @{$definitionMany};
-
-  return $self;
-}
-
-sub _definition {
-  my ($self, $definition) = @_;
-
-  print STDERR "$_[1]\n";
-
-  my $method = '_' . $self->_blessed($definition->[0]);
-  $self->$method($definition->[0]);
-
-  return $self;
-}
-
-sub _typeDcl {
-  my ($self, $typeDcl) = @_;
-
-  return $self;
-}
-
-sub _constDcl {
-  my ($self, $constDcl) = @_;
-
-  return $self;
-}
-
-sub _exceptDcl {
-  my ($self, $exceptDcl) = @_;
-
-  return $self;
-}
-
-sub _interface {
-  my ($self, $interface) = @_;
-
-  my $method = '_' . $self->_blessed($interface->[0]);
-  $self->$method($interface->[0]);
-
-  return $self;
-}
-
-sub _interfaceDcl {
-  my ($self, $interfaceDcl) = @_;
-
-  my ($interfaceHeader, undef, $interfaceBody, undef) = @{$interfaceDcl};
-
-  $self->_interfaceHeader($interfaceHeader);
-  $self->_interfaceBody($interfaceBody);
-
-  $self->_popScope();
-
-  return $self;
-}
-
-sub _forwardDcl {
-  my ($self, $forwardDcl) = @_;
-
-  my ($abstractOrLocalMaybe, undef, $identifier) = @{$forwardDcl};
-
-  $self->_pushScope($identifier->[LEXEME_INDEX]->[LEXEME_INDEX_VALUE]);
-
-  return $self;
-}
-
-sub _interfaceHeader {
-  my ($self, $interfaceHeader) = @_;
-
-  my ($abstractOrLocalMaybe, undef, $identifier, $interfaceInheritanceSpecMaybe) = @{$interfaceHeader};
-
-  $self->_pushScope($identifier->[LEXEME_INDEX]->[LEXEME_INDEX_VALUE]);
-
-  return $self;
-}
-
-sub _interfaceBody {
-  my ($self, $interfaceBody) = @_;
-
-  return $self;
-}
-
-sub _module {
-  my ($self, $module) = @_;
-
-  my (undef, $identifier, undef, $definitionMany, undef) = @{$module};
-
-  $self->_pushRoot($identifier->[LEXEME_INDEX]->[LEXEME_INDEX_VALUE]);
-  $self->_definitionMany($definitionMany);
-  $self->_popRoot();
-
-  return $self;
-}
-
-sub _value {
-  my ($self, $value) = @_;
-
-  return $self;
-}
-
-sub _typeIdDcl {
-  my ($self, $typeIdDcl) = @_;
-
-  return $self;
-}
-
-sub _typePrefixDcl {
-  my ($self, $typeDcl) = @_;
-
-  return $self;
-}
-
-sub _event {
-  my ($self, $typeDcl) = @_;
-
-  return $self;
-}
-
-sub _component {
-  my ($self, $typeDcl) = @_;
-
-  return $self;
-}
-
-sub _homeDcl {
-  my ($self, $typeDcl) = @_;
-
-  return $self;
 }
 
 

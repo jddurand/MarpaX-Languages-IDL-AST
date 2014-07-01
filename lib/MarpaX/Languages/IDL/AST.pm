@@ -415,7 +415,7 @@ sub _checkIdentifierCollision {
     #
     # Per def, $lcIdentifier is the found identifier in current scope
     #
-    print STDERR Dumper($self->{_context});
+    # print STDERR Dumper($self->{_context});
 
     if ($self->{_context}->{curScopeTypeAndLcIdentifier}->{scopeType} != SCOPE_TYPE_ANY &&
 	$self->{_context}->{curScopeTypeAndLcIdentifier}->{scopeLcIdentifier}->{lcIdentifier} eq $lcIdentifier) {

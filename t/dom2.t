@@ -12,6 +12,3 @@ my $obj = MarpaX::Languages::IDL::AST2->new();
 my $r = $obj->parse(catfile('data', 'dom.idl'));
 
 ok(defined($r), "dom.idl is OK");
-
-use Data::Dumper;
-print Dumper($obj->ast);
