@@ -211,6 +211,8 @@ sub generate {
 
     my $tt = Template->new($ttOptionHashp) || croak "$Template::ERROR";
 
+    $tt->process("$target.tt2") || croak $tt->error();
+
     return $self;
 }
 
