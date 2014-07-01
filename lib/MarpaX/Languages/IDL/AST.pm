@@ -6,7 +6,9 @@ use MarpaX::Languages::IDL::AST::Value;
 use MarpaX::Languages::IDL::AST::Util;
 use Scalar::Util qw/blessed/;
 use Template;
+use Template::Constants qw/:chomp/;
 use File::ShareDir ':ALL';
+use Data::Structure::Util;
 use constant {
   LEXEME_INDEX => 0
 };
@@ -208,7 +210,8 @@ sub generate {
     my $ttOptionHashp = $targetOptionHashp->{tt};
     $ttOptionHashp->{INCLUDE_PATH} //= module_dir(__PACKAGE__);
     $ttOptionHashp->{INTERPOLATE} //= 1;
-    $ttOptionHashp->{RECURSION} //= 1;
+    # $ttOptionHashp->{PRE_CHOMP} //= CHOMP_GREEDY;
+    # $ttOptionHashp->{POST_CHOMP} //= CHOMP_ONE;
 
     my $tt = Template->new($ttOptionHashp) || croak "$Template::ERROR";
 
@@ -216,11 +219,14 @@ sub generate {
     # The semantics for our TT templates is to provide a hash with
     # a reference to a scratchpad hash (free to use) and the AST
     #
-    my $vars = {scratchpad => {}, ast => $ast};
+    my $vars = {scratchpad => {},
+                as_list => sub { my $self = shift; return [ @{$self} ] },
+                ast => $ast};
+
     my $output = '';
     $tt->process("$target.tt2", $vars, \$output) || croak $tt->error();
 
-    print STDERR "$output\n";
+    print ">>>TEMPLATE<<<\n$output\n>>>>END OF TEMPLATE<<<<\n";
 
     return $self;
 }
@@ -244,7 +250,7 @@ L<Marpa::R2>
 
 __DATA__
 :default ::= action => [values] bless => ::lhs
-lexeme default = action => [ start, length, value ] latm => 1
+lexeme default = action => [ start, length, value ] latm => 1 bless => ::name
 
 :start ::= <specification>
 
@@ -571,23 +577,23 @@ lexeme default = action => [ start, length, value ] latm => 1
 #
 # Copied from C language
 #
-<stringLiteral> ::= STRING_LITERAL_UNIT+
-:lexeme ~ <STRING_LITERAL_UNIT>
+<stringLiteral> ::= STRINGLITERALUNIT+
+:lexeme ~ <STRINGLITERALUNIT>
 STRING_LITERAL_INSIDE ~ [^"\\\n]
 STRING_LITERAL_INSIDE ~ ES
 STRING_LITERAL_INSIDE_any ~ STRING_LITERAL_INSIDE*
-STRING_LITERAL_UNIT ~ SP_maybe '"' STRING_LITERAL_INSIDE_any '"' WS_any
+STRINGLITERALUNIT ~ SP_maybe '"' STRING_LITERAL_INSIDE_any '"' WS_any
 
-<wideStringLiteral> ::= WIDE_STRING_LITERAL_UNIT+
-:lexeme ~ <WIDE_STRING_LITERAL_UNIT>
-WIDE_STRING_LITERAL_UNIT ~ SP_maybe 'L"' STRING_LITERAL_INSIDE_any '"' WS_any
+<wideStringLiteral> ::= WIDESTRINGLITERALUNIT+
+:lexeme ~ <WIDESTRINGLITERALUNIT>
+WIDESTRINGLITERALUNIT ~ SP_maybe 'L"' STRING_LITERAL_INSIDE_any '"' WS_any
 
-<integerLiteral> ::= I_CONSTANT
-:lexeme ~ <I_CONSTANT>
-I_CONSTANT ~ HP H_many IS_maybe
-           | BP B_many IS_maybe   # Gcc extension: binary constants
-           | NZ D_any IS_maybe
-           | '0' O_any IS_maybe
+<integerLiteral> ::= ICONSTANT
+:lexeme ~ <ICONSTANT>
+ICONSTANT ~ HP H_many IS_maybe
+          | BP B_many IS_maybe   # Gcc extension: binary constants
+          | NZ D_any IS_maybe
+          | '0' O_any IS_maybe
 I_CONSTANT_INSIDE ~ [^'\\\n]
 I_CONSTANT_INSIDE ~ ES
 I_CONSTANT_INSIDE_many ~ I_CONSTANT_INSIDE+
@@ -598,7 +604,7 @@ I_CONSTANT_INSIDE_many ~ I_CONSTANT_INSIDE+
 IDENTIFIER          ~ L A_any
 
 #
-# Original C includes this definition in I_CONSTANT
+# Original C includes this definition in ICONSTANT
 #
 <characterLiteral> ::= CHARACTERLITERAL
 :lexeme ~ <CHARACTERLITERAL>
@@ -615,14 +621,14 @@ FIXEDPTLITERAL ~ D_many '.' D_many dD
                  |        '.' D_many dD
                  | D_many '.'        dD
 
-<floatingPtLiteral> ::= F_CONSTANT
-:lexeme ~ <F_CONSTANT>
-F_CONSTANT ~ D_many E FS_maybe
-           | D_any '.' D_many E_maybe FS_maybe
-           | D_many '.' E_maybe FS_maybe
-           | HP H_many P FS_maybe
-           | HP H_any '.' H_many P FS_maybe
-           | HP H_many '.' P FS_maybe
+<floatingPtLiteral> ::= FCONSTANT
+:lexeme ~ <FCONSTANT>
+FCONSTANT ~ D_many E FS_maybe
+          | D_any '.' D_many E_maybe FS_maybe
+          | D_many '.' E_maybe FS_maybe
+          | HP H_many P FS_maybe
+          | HP H_any '.' H_many P FS_maybe
+          | HP H_many '.' P FS_maybe
 
 #
 # G0 helpers
