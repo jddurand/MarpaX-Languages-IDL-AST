@@ -8,7 +8,6 @@ use Scalar::Util qw/blessed/;
 use Template;
 use Template::Constants qw/:chomp/;
 use File::ShareDir ':ALL';
-use Data::Structure::Util;
 use constant {
   LEXEME_INDEX => 0
 };
@@ -210,8 +209,9 @@ sub generate {
     my $ttOptionHashp = $targetOptionHashp->{tt};
     $ttOptionHashp->{INCLUDE_PATH} //= module_dir(__PACKAGE__);
     $ttOptionHashp->{INTERPOLATE} //= 1;
-    # $ttOptionHashp->{PRE_CHOMP} //= CHOMP_GREEDY;
-    # $ttOptionHashp->{POST_CHOMP} //= CHOMP_ONE;
+    $ttOptionHashp->{EVAL_PERL} //= 1;
+    $ttOptionHashp->{PRE_CHOMP} //= CHOMP_NONE;
+    $ttOptionHashp->{POST_CHOMP} //= CHOMP_NONE;
 
     my $tt = Template->new($ttOptionHashp) || croak "$Template::ERROR";
 
@@ -220,7 +220,25 @@ sub generate {
     # a reference to a scratchpad hash (free to use) and the AST
     #
     my $vars = {scratchpad => {},
-                as_list => sub { my $self = shift; return [ @{$self} ] },
+                as_list => sub {
+                  my $arrayp = shift;
+                  return [ @{$arrayp} ];
+                },
+                cr => sub {return "\r" x (shift // 0); },
+                nl => sub {return "\n" x (shift // 0); },
+                tab => sub {return "\t" x (shift // 0); },
+                sp => sub {return ' ' x (shift // 0); },
+                lexeme => sub {
+                  my $item = shift || [];
+                  my $ref = ref($item);
+                  if ($ref eq 'ARRAY') {
+                    return $item->[2];
+                  } elsif (! $ref) {
+                    return $item;
+                  } else {
+                    return '';
+                  }
+                },
                 ast => $ast};
 
     my $output = '';
@@ -250,7 +268,7 @@ L<Marpa::R2>
 
 __DATA__
 :default ::= action => [values] bless => ::lhs
-lexeme default = action => [ start, length, value ] latm => 1 bless => ::name
+lexeme default = action => [ start, length, value ] latm => 1# bless => ::name
 
 :start ::= <specification>
 
