@@ -1,4 +1,10 @@
+[%~# Instead of requiring the ScalarUtil, Dumper etc... plugin, the following methods are explicitely provided by the caller: ~%]
+[%~# Scalar::Utils::blessed() ~%]
+[%~# Scalar::Utils::reftype() ~%]
+[%~# Data::Dumper() ~%]
+
 use MooseX::DeclareX;     # All MooseX::Declare sugar and more
+
 [% PROCESS ast2perl item=ast indent=0 %]
 
 [%~# Remember: AST is always a blessed array reference. Every item inside as well, EXCEPT hardcoded lexemes ~%]
@@ -9,7 +15,6 @@ use MooseX::DeclareX;     # All MooseX::Declare sugar and more
 [%~ END ~%]
 
 [%~ BLOCK ast2perl ~%]
-  [%~# Instead of requiring the ScalarUtil plugin, blessed() method is exported by the caller ~%]
   [%~ blessedName = blessed(item) ~%]
   [%~ IF blessedName ~%]
     [%~ SWITCH blessedName ~%]

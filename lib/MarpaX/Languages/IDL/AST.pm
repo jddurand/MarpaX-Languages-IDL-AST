@@ -221,16 +221,25 @@ sub generate {
     # a reference to a scratchpad hash (free to use) and the AST
     #
     my $vars = {scratchpad => {},
-                Dumper => sub {
-                  print STDERR Dumper(shift);
-                },
-                blessed => sub {
-                  return blessed(shift) || '';
-                },
+		#
+		# Data::Dumper explicit support
+		#
+                Dumper => sub { print STDERR Dumper(shift); },
+		#
+		# Scalar::Utils explicit support
+		#
+                blessed => sub {return blessed(shift) || ''; },
+                reftype => sub {return reftype(shift) || ''; },
+		#
+		# TT2 does not like blessed arrays
+		#
                 as_list => sub {
                   my $arrayp = shift;
                   return [ @{$arrayp} ];
                 },
+		#
+		# General hooks
+		#
                 cr => sub {return "\r" x (shift // 0); },
                 nl => sub {return "\n" x (shift // 0); },
                 tab => sub {return "\t" x (shift // 0); },
