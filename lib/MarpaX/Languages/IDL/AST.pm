@@ -5,6 +5,7 @@ package MarpaX::Languages::IDL::AST;
 use MarpaX::Languages::IDL::AST::Value;
 use MarpaX::Languages::IDL::AST::Util;
 use Scalar::Util qw/blessed/;
+use Data::Dumper;
 use Template;
 use Template::Constants qw/:chomp/;
 use File::ShareDir ':ALL';
@@ -220,6 +221,12 @@ sub generate {
     # a reference to a scratchpad hash (free to use) and the AST
     #
     my $vars = {scratchpad => {},
+                Dumper => sub {
+                  print STDERR Dumper(shift);
+                },
+                blessed => sub {
+                  return blessed(shift) || '';
+                },
                 as_list => sub {
                   my $arrayp = shift;
                   return [ @{$arrayp} ];

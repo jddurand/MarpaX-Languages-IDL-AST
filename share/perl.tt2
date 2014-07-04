@@ -1,5 +1,3 @@
-[%~ USE ScalarUtil ~%]
-[%~ USE Dumper ~%]
 use MooseX::DeclareX;     # All MooseX::Declare sugar and more
 [% PROCESS ast2perl item=ast indent=0 %]
 
@@ -11,10 +9,10 @@ use MooseX::DeclareX;     # All MooseX::Declare sugar and more
 [%~ END ~%]
 
 [%~ BLOCK ast2perl ~%]
-  [%~ blessed = ScalarUtil.blessed(item) ~%]
-  [%~ IF blessed ~%]
-    [%~ SWITCH blessed ~%]
-
+  [%~# Instead of requiring the ScalarUtil plugin, blessed() method is exported by the caller ~%]
+  [%~ blessedName = blessed(item) ~%]
+  [%~ IF blessedName ~%]
+    [%~ SWITCH blessedName ~%]
       [%~ ################################################ ~%]
       [%~ CASE 'IDL::AST::module' ~%]
       [%~ ################################################ ~%]
