@@ -171,6 +171,18 @@ sub ast {
     return $self->{_ast};
 }
 
+=head2 $self->output()
+
+Returns the latest output produced by $self->generate().
+
+=cut
+
+sub output {
+    my ($self) = @_;
+
+    return $self->{_output};
+}
+
 =head2 $self->generate($ast, $target, $targetOptionHashp)
 
 Generate files for the given AST $ast.
@@ -258,9 +270,7 @@ sub generate {
                 ast => $ast};
 
     my $output = '';
-    $tt->process("$target.tt2", $vars, \$output) || croak $tt->error();
-
-    print ">>>TEMPLATE<<<\n$output\n>>>>END OF TEMPLATE<<<<\n";
+    $tt->process("$target.tt2", $vars, \$self->{_output}) || croak $tt->error();
 
     return $self;
 }

@@ -2,11 +2,15 @@
 [%~# Scalar::Utils::blessed() ~%]
 [%~# Scalar::Utils::reftype() ~%]
 [%~# Data::Dumper() ~%]
-
+#!env perl
+use strict;
+use diagnostics;
 use MooseX::DeclareX;     # All MooseX::Declare sugar and more
 
 [% PROCESS ast2perl item=ast indent=0 %]
 
+1;
+[% nl %]
 [%~# Remember: AST is always a blessed array reference. Every item inside as well, EXCEPT hardcoded lexemes ~%]
 [%~# TT2 does not like blessed arrays, we provide a method that return the content: as_list ~%]
 
