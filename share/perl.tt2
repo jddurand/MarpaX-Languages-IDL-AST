@@ -1,3 +1,5 @@
+[%~# The whole IDL file is describing what is "Role" in Moose terminology ~%]
+
 [%~# Instead of requiring the ScalarUtil, Dumper etc... plugin, the following methods are explicitely provided by the caller: ~%]
 [%~# Scalar::Utils::blessed() ~%]
 [%~# Scalar::Utils::reftype() ~%]
@@ -5,14 +7,13 @@
 #!env perl
 use strict;
 use diagnostics;
-use MooseX::DeclareX;     # All MooseX::Declare sugar and more
+use MooseX::Declare;
 
-[% PROCESS ast2perl item=ast indent=0 %]
-
-1;
+[% PROCESS ast2perl item=ast indent=0 package=[] %]
 [% nl %]
 [%~# Remember: AST is always a blessed array reference. Every item inside as well, EXCEPT hardcoded lexemes ~%]
 [%~# TT2 does not like blessed arrays, we provide a method that return the content: as_list ~%]
+[%~# IDL's "root" and "scope" values correspond to a perl's "package" name value ~%]
 
 [%~ BLOCK getLexeme ~%]
 [%~ lexeme(as_list(item.0)) ~%]
@@ -22,27 +23,79 @@ use MooseX::DeclareX;     # All MooseX::Declare sugar and more
   [%~ blessedName = blessed(item) ~%]
   [%~ IF blessedName ~%]
     [%~ SWITCH blessedName ~%]
-      [%~ ################################################ ~%]
+
+      [%~################################################ ~%]
       [%~ CASE 'IDL::AST::module' ~%]
-      [%~ ################################################ ~%]
+      [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
-class [% INCLUDE getLexeme item=rhs.1 %] {
+        [%~ identifier = INCLUDE getLexeme item=rhs.1 ~%]
+        [%~ package.push(identifier) ~%]
+
+role [% package.join('::') %] {
 [% INCLUDE ast2perl item=as_list(item).3 indent=indent+2 %]
 }
-[%~ RETURN ~%]
-
-      [%~ ################################################ ~%]
-      [%~ CASE 'IDL::AST::forwardDcl' ~%]
-      [%~ ################################################ ~%]
-        [%~ rhs = as_list(item) ~%]
-[% sp(indent) %]requires [% INCLUDE getLexeme item=rhs.2 %];
+[% dummy = package.pop() ~%]
 [% RETURN ~%]
 
-      [%~ ################################################ ~%]
-      [%~ CASE 'IDL::AST::definition' ~%]
-      [%~ ################################################ ~%]
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::forwardDcl' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ identifier = INCLUDE getLexeme item=rhs.2 ~%]
+        [%~ package.push(identifier) ~%]
 
+[% sp(indent) %]with '[% package.join('::') %]';
+[% dummy = package.pop() ~%]
+[% RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::interfaceDcl' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ interfaceHeader = rhs.0 ~%]
+
+[%~ INCLUDE ast2perl item=interfaceHeader %][% sp(1) %]{
+[% sp(indent) %]}
+[% dummy = package.pop() ~%]
+[% RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::interfaceHeader' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ identifier = INCLUDE getLexeme item=rhs.2 ~%]
+        [%~ package.push(identifier) ~%]
+
+[% sp(indent) %]class [% package.join('::') ~%]
+
+        [%~ interfaceInheritanceSpecMaybe = rhs.3 ~%]
+
+[%~ INCLUDE ast2perl item=interfaceInheritanceSpecMaybe ~%]
+[% RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::interfaceInheritanceSpec' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ interfaceNameListMany = rhs.1 ~%]
+        [%~# New scope was already pushed - remove it temporarly ~~ %]
+        [%~ myLast = package.pop ~%]
+
+[% sp(1) %]extends([%~ INCLUDE ast2perl item=interfaceNameListMany %])
+        [%~ dummy = package.push(myLast) ~%]
+[%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::interfaceNameListMany' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ FOREACH interfaceName IN rhs ~%]
+          [%~ rhs2 = as_list(interfaceName) ~%]
+          [%~# C.f. AST/Value.pm, where concatenation of scopedName is already done, so that scopedName looks like a lexeme ~%]
+[%~ loop.index() > 0 ? ', ' : ''; package.join('::'); INCLUDE getLexeme item=rhs2; ~%]
+        [%~ END ~%]
       [%~ CASE DEFAULT ~%]
+
     [%~ END ~%]
     [%~ FOREACH rhs IN as_list(item) ~%]
       [%~ INCLUDE ast2perl item=rhs ~%]

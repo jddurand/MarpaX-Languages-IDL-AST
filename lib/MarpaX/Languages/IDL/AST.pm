@@ -7,7 +7,7 @@ use MarpaX::Languages::IDL::AST::Util;
 use Scalar::Util qw/blessed/;
 use Data::Dumper;
 use Template;
-use Template::Constants qw/:chomp/;
+use Template::Constants qw/:chomp :debug/;
 use File::ShareDir ':ALL';
 use constant {
   LEXEME_INDEX => 0
