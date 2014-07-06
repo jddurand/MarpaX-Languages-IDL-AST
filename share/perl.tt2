@@ -1,23 +1,42 @@
-[%~# The whole IDL file is describing what is "Role" in Moose terminology ~%]
-
-[%~# Instead of requiring the ScalarUtil, Dumper etc... plugin, the following methods are explicitely provided by the caller: ~%]
-[%~# Scalar::Utils::blessed() ~%]
-[%~# Scalar::Utils::reftype() ~%]
-[%~# Data::Dumper() ~%]
 #!env perl
-use strict;
-use diagnostics;
+
 use MooseX::Declare;
+use MooseX::Types::Structured;
+use MooseX::Types::Common::Numeric;
 
-[% PROCESS ast2perl item=ast indent=0 package=[] %]
+[% # The whole IDL file is describing what is "Role" in Moose terminology
+   # Instead of requiring the ScalarUtil, Dumper etc... plugin, the following methods are explicitely provided by the caller:
+   # - Scalar::Utils::blessed()
+   # - Scalar::Utils::reftype()
+   # - Data::Dumper()
+   # TT2 does not like blessed arrays, we provide a method that return the content: as_list
+   # - as_list()
+   #
+   # As of time of of this writing, nested namespaces are not supported by MooseX::Declare
+   # so they are explicitely setted
+   #
+~%]
+[% PROCESS ast2perl item=ast indent=0 root=[] scope=[] %]
 [% nl %]
-[%~# Remember: AST is always a blessed array reference. Every item inside as well, EXCEPT hardcoded lexemes ~%]
-[%~# TT2 does not like blessed arrays, we provide a method that return the content: as_list ~%]
-[%~# IDL's "root" and "scope" values correspond to a perl's "package" name value ~%]
+[%~ RETURN ~%]
 
-[%~ BLOCK getLexeme ~%]
-[%~ lexeme(as_list(item.0)) ~%]
+[%~# Remember: AST is always a blessed array reference. Every item inside as well, EXCEPT hardcoded lexemes ~%]
+
+[%~ BLOCK printDump ~%]
+  [%~ PERL ~%]
+    use Data::Dumper;
+    print Dumper($stash->get('what'));
+  [%~ END ~%]
 [%~ END ~%]
+[%~ BLOCK getLexeme; lexeme(as_list(item.0));  END ~%]
+
+[%~ BLOCK pushRoot;  root.push(root.size <= 0 ? what : '::' _ what);   END ~%]
+[%~ BLOCK printRoot; root.join('');            END ~%]
+[%~ BLOCK popRoot;   dummy = root.pop();       END ~%]
+[%~ # Scope is always relative when we push it, so there is always '::' ~%]
+[%~ BLOCK pushScope;  scope.push('::' _ what); END ~%]
+[%~ BLOCK printScope; INCLUDE printRoot; scope.join('');          END ~%]
+[%~ BLOCK popScope;   dummy = scope.pop();     END ~%]
 
 [%~ BLOCK ast2perl ~%]
   [%~ blessedName = blessed(item) ~%]
@@ -29,23 +48,22 @@ use MooseX::Declare;
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE getLexeme item=rhs.1 ~%]
-        [%~ package.push(identifier) ~%]
-
-role [% package.join('::') %] {
-[% INCLUDE ast2perl item=as_list(item).3 indent=indent+2 %]
+        [%~ INCLUDE pushRoot what=identifier ~%]
+role [% INCLUDE printRoot %] {
+  use MooseX::Interface;
+[% INCLUDE ast2perl item=as_list(item).3 indent=indent+2 ~%]
 }
-[% dummy = package.pop() ~%]
-[% RETURN ~%]
+[% INCLUDE popRoot ~%]
+[% RETURN %]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::forwardDcl' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE getLexeme item=rhs.2 ~%]
-        [%~ package.push(identifier) ~%]
-
-[% sp(indent) %]with '[% package.join('::') %]';
-[% dummy = package.pop() ~%]
+        [%~ INCLUDE pushScope what=identifier ~%]
+[% sp(indent) %]with '[% INCLUDE printScope %]';
+[% INCLUDE popScope ~%]
 [% RETURN ~%]
 
       [%~################################################ ~%]
@@ -53,10 +71,12 @@ role [% package.join('::') %] {
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ interfaceHeader = rhs.0 ~%]
+        [%~ # Note: interfaceHader will push to scope without popping ~%]
+[% INCLUDE ast2perl item=interfaceHeader %] {
+[% sp(indent+2) %]use MooseX::Interface;
 
-[%~ INCLUDE ast2perl item=interfaceHeader %][% sp(1) %]{
 [% sp(indent) %]}
-[% dummy = package.pop() ~%]
+[% INCLUDE popScope ~%]
 [% RETURN ~%]
 
       [%~################################################ ~%]
@@ -64,13 +84,12 @@ role [% package.join('::') %] {
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE getLexeme item=rhs.2 ~%]
-        [%~ package.push(identifier) ~%]
-
-[% sp(indent) %]class [% package.join('::') ~%]
-
+        [%~ INCLUDE pushScope what=identifier ~%]
+[% sp(indent) %]role [% INCLUDE printScope %] 
+        [%~ INCLUDE popScope ~%]
         [%~ interfaceInheritanceSpecMaybe = rhs.3 ~%]
-
 [%~ INCLUDE ast2perl item=interfaceInheritanceSpecMaybe ~%]
+        [%~ INCLUDE pushScope what=identifier ~%]
 [% RETURN ~%]
 
       [%~################################################ ~%]
@@ -78,11 +97,8 @@ role [% package.join('::') %] {
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ interfaceNameListMany = rhs.1 ~%]
-        [%~# New scope was already pushed - remove it temporarly ~~ %]
-        [%~ myLast = package.pop ~%]
 
-[% sp(1) %]extends([%~ INCLUDE ast2perl item=interfaceNameListMany %])
-        [%~ dummy = package.push(myLast) ~%]
+[% sp(1) %]with ([%~ INCLUDE ast2perl item=interfaceNameListMany %])
 [%~ RETURN ~%]
 
       [%~################################################ ~%]
@@ -90,10 +106,119 @@ role [% package.join('::') %] {
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ FOREACH interfaceName IN rhs ~%]
-          [%~ rhs2 = as_list(interfaceName) ~%]
+          [%~ scopedName = as_list(interfaceName) ~%]
           [%~# C.f. AST/Value.pm, where concatenation of scopedName is already done, so that scopedName looks like a lexeme ~%]
-[%~ loop.index() > 0 ? ', ' : ''; package.join('::'); INCLUDE getLexeme item=rhs2; ~%]
+          [%~# If scopedName begins with '::', this is an absolute scope, otherwise a relative scope ~%]
+          [%~ identifier = INCLUDE getLexeme item=scopedName; ~%]
+[% loop.index() > 0 ? ', ' : ''; %]
+          [%~ IF identifier.match('^::') ~%]
+[% identifier ~%]
+          [%~ ELSE ~%]
+            [%~ INCLUDE pushScope what=identifier ~%]
+[% INCLUDE printScope ~%]
+            [%~ INCLUDE popScope ~%]
+          [%~ END ~%]
         [%~ END ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::typeDcl' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ firstItem = rhs.0 ~%]
+        [%~ IF NOT blessed(firstItem) ~%]
+          [%~ IF firstItem == 'typedef' ~%]
+            [%~ typeDeclarator = rhs.1 ~%]
+[% sp(indent) %]subtype [%~ INCLUDE ast2perl item=typeDeclarator indent=indent+2 %];
+[%~ RETURN ~%]
+          [%~ END ~%]
+        [%~ END ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::sequenceType' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ simpleTypeSpec = rhs.2 ~%]
+        [%~ IF rhs.max >= 4 ~%]
+          [%~ positiveIntConst = INCLUDE ast2perl item=rhs.4 ~%]
+        [%~ ELSE ~%]
+          [%~ positiveIntConst = -1 ~%]
+        [%~ END ~%]
+[% sp(indent) %]ArrayRef[[%~ INCLUDE ast2perl item=simpleTypeSpec indent=indent+2 %]]
+        [%~ IF positiveIntConst >= 0 ~%]
+[% sp(indent) %], where {scalar(@_) <= [%~ positiveIntConst ~%]}
+        [%~ END ~%]
+[%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::floatingPtType' ~%]
+      [%~################################################ ~%]
+Num
+[%~# No need to go further ~%]
+[%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::signedInt' ~%]
+      [%~################################################ ~%]
+Int
+[%~# No need to go further ~%]
+[%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::signedInt' ~%]
+      [%~ CASE 'IDL::AST::octetType' ~%]
+      [%~################################################ ~%]
+PositiveOrZeroInt
+[%~# No need to go further ~%]
+[%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::anyType' ~%]
+      [%~################################################ ~%]
+Any
+[%~# No need to go further ~%]
+[%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::objectType' ~%]
+      [%~################################################ ~%]
+Object
+[%~# No need to go further ~%]
+[%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::charType' ~%]
+      [%~ CASE 'IDL::AST::wideCharType' ~%]
+      [%~################################################ ~%]
+Str
+[%~# No need to go further ~%]
+[%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::booleanType' ~%]
+      [%~################################################ ~%]
+Bool
+[%~# No need to go further ~%]
+[%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::orExpr' ~%]
+      [%~ CASE 'IDL::AST::xorExpr' ~%]
+      [%~ CASE 'IDL::AST::andExpr' ~%]
+      [%~ CASE 'IDL::AST::shiftExpr' ~%]
+      [%~ CASE 'IDL::AST::addExpr' ~%]
+      [%~ CASE 'IDL::AST::multExpr' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ IF rhs.max >= 2 ~%]
+[%~ INCLUDE getLexeme item=rhs.1 ~%]
+        [%~ END ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::multExpr' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+[%~ INCLUDE getLexeme item=rhs.0 ~%]
+
       [%~ CASE DEFAULT ~%]
 
     [%~ END ~%]

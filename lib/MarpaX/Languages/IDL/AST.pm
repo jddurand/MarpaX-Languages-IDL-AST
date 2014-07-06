@@ -225,52 +225,51 @@ sub generate {
     $ttOptionHashp->{EVAL_PERL} //= 1;
     $ttOptionHashp->{PRE_CHOMP} //= CHOMP_NONE;
     $ttOptionHashp->{POST_CHOMP} //= CHOMP_NONE;
-
     my $tt = Template->new($ttOptionHashp) || croak "$Template::ERROR";
 
     #
     # The semantics for our TT templates is to provide a hash with
     # a reference to a scratchpad hash (free to use) and the AST
     #
-    my $vars = {scratchpad => {},
-		#
-		# Data::Dumper explicit support
-		#
-                Dumper => sub { print STDERR Dumper(shift); },
-		#
-		# Scalar::Utils explicit support
-		#
-                blessed => sub {return blessed(shift) || ''; },
-                reftype => sub {return reftype(shift) || ''; },
-		#
-		# TT2 does not like blessed arrays
-		#
-                as_list => sub {
-                  my $arrayp = shift;
-                  return [ @{$arrayp} ];
-                },
-		#
-		# General hooks
-		#
-                cr => sub {return "\r" x (shift // 0); },
-                nl => sub {return "\n" x (shift // 0); },
-                tab => sub {return "\t" x (shift // 0); },
-                sp => sub {return ' ' x (shift // 0); },
-                lexeme => sub {
-                  my $item = shift || [];
-                  my $ref = ref($item);
-                  if ($ref eq 'ARRAY') {
-                    return $item->[2];
-                  } elsif (! $ref) {
-                    return $item;
-                  } else {
-                    return '';
-                  }
-                },
-                ast => $ast};
+    my $ttVarsHashp = $targetOptionHashp->{vars};
+    #
+    # Data::Dumper explicit support
+    #
+    $ttVarsHashp->{Dumper} //= sub { print STDERR Dumper(shift); };
+    #
+    # Scalar::Utils explicit support
+    #
+    $ttVarsHashp->{blessed} //= sub {return blessed(shift) || ''; };
+    $ttVarsHashp->{reftype} //= sub {return reftype(shift) || ''; };
+    #
+    # TT2 does not like blessed arrays
+    #
+    $ttVarsHashp->{as_list} //= sub {
+	my $arrayp = shift;
+	return [ @{$arrayp} ];
+    };
+    #
+    # General hooks
+    #
+    $ttVarsHashp->{cr}     //= sub {return "\r" x (shift // 0); };
+    $ttVarsHashp->{nl}     //= sub {return "\n" x (shift // 0); };
+    $ttVarsHashp->{tab}    //= sub {return "\t" x (shift // 0); };
+    $ttVarsHashp->{sp}     //= sub {return ' ' x (shift // 0); };
+    $ttVarsHashp->{lexeme} //= sub {
+	my $item = shift || [];
+	my $ref = ref($item);
+	if ($ref eq 'ARRAY') {
+	    return $item->[2];
+	} elsif (! $ref) {
+	    return $item;
+	} else {
+	    return '';
+	}
+    };
+    $ttVarsHashp->{ast} //= $ast;
 
     my $output = '';
-    $tt->process("$target.tt2", $vars, \$self->{_output}) || croak $tt->error();
+    $tt->process("$target.tt2", $ttVarsHashp, \$self->{_output}) || croak $tt->error();
 
     return $self;
 }
