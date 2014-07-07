@@ -3,6 +3,7 @@
 use MooseX::Declare;
 use MooseX::Types::Structured;
 use MooseX::Types::Common::Numeric;
+use MooseX::ABCD;
 
 [% # The whole IDL file is describing what is "Role" in Moose terminology
    # Instead of requiring the ScalarUtil, Dumper etc... plugin, the following methods are explicitely provided by the caller:
@@ -37,8 +38,19 @@ use MooseX::Types::Common::Numeric;
 [%~ BLOCK pushScope;  scope.push('::' _ what); END ~%]
 [%~ BLOCK printScope; INCLUDE printRoot; scope.join('');          END ~%]
 [%~ BLOCK popScope;   dummy = scope.pop();     END ~%]
+[%~ BLOCK xxxExpr; ~%]
+  [%~ rhs = as_list(item) ~%]
+  [%~ IF rhs.max == 2 ~%]
+    [%~ INCLUDE ast2perl item=rhs.0 %]
+    [%~ INCLUDE getLexeme item=rhs.1 ~%]
+    [%~ INCLUDE ast2perl item=rhs.2 %]
+  [%~ ELSE ~%]
+    [%~ INCLUDE ast2perl item=rhs.0 %]
+  [%~ END ~%]
+[%~ END ~%]
 
 [%~ BLOCK ast2perl ~%]
+  [%~ indent = newindent || indent ~%]
   [%~ blessedName = blessed(item) ~%]
   [%~ IF blessedName ~%]
     [%~ SWITCH blessedName ~%]
@@ -47,59 +59,68 @@ use MooseX::Types::Common::Numeric;
       [%~ CASE 'IDL::AST::module' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
-        [%~ identifier = INCLUDE getLexeme item=rhs.1 ~%]
+        [%~ identifier = INCLUDE getLexeme item=rhs.1 | trim ~%]
         [%~ INCLUDE pushRoot what=identifier ~%]
-role [% INCLUDE printRoot %] {
-  use MooseX::Interface;
-[% INCLUDE ast2perl item=as_list(item).3 indent=indent+2 ~%]
-}
-[% INCLUDE popRoot ~%]
-[% RETURN %]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]role [% INCLUDE printRoot | trim  %] {
+[% sp(indent) %]  use MooseX::Interface;
+[% INCLUDE ast2perl item=as_list(item).3 newindent=indent+2 %]
+[% sp(indent) %]}
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ INCLUDE popRoot ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::forwardDcl' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
-        [%~ identifier = INCLUDE getLexeme item=rhs.2 ~%]
-        [%~ INCLUDE pushScope what=identifier ~%]
-[% sp(indent) %]with '[% INCLUDE printScope %]';
-[% INCLUDE popScope ~%]
-[% RETURN ~%]
+        [%~ identifier = INCLUDE getLexeme item=rhs.2 | trim ~%]
+        [%~ INCLUDE pushScope what=identifier | trim ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]with '[% INCLUDE printScope | trim %]';
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ INCLUDE popScope ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::interfaceDcl' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ interfaceHeader = rhs.0 ~%]
-        [%~ # Note: interfaceHader will push to scope without popping ~%]
+        [% # Note: interfaceHader will push to scope without popping ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% INCLUDE ast2perl item=interfaceHeader %] {
 [% sp(indent+2) %]use MooseX::Interface;
-
 [% sp(indent) %]}
-[% INCLUDE popScope ~%]
-[% RETURN ~%]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ INCLUDE popScope ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::interfaceHeader' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
-        [%~ identifier = INCLUDE getLexeme item=rhs.2 ~%]
+        [%~ identifier = INCLUDE getLexeme item=rhs.2 | trim ~%]
         [%~ INCLUDE pushScope what=identifier ~%]
-[% sp(indent) %]role [% INCLUDE printScope %] 
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% nl %]
+[% sp(indent) %]role [% INCLUDE printScope | trim %] 
+        [%~# We would like the with () on the same line, so it is done explicitely here ~%]
         [%~ INCLUDE popScope ~%]
         [%~ interfaceInheritanceSpecMaybe = rhs.3 ~%]
-[%~ INCLUDE ast2perl item=interfaceInheritanceSpecMaybe ~%]
+[%~ INCLUDE ast2perl item=interfaceInheritanceSpecMaybe | trim ~%]
+[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE pushScope what=identifier ~%]
-[% RETURN ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::interfaceInheritanceSpec' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ interfaceNameListMany = rhs.1 ~%]
-
-[% sp(1) %]with ([%~ INCLUDE ast2perl item=interfaceNameListMany %])
-[%~ RETURN ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]with ([%~ INCLUDE ast2perl item=interfaceNameListMany | trim ~%])
+[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::interfaceNameListMany' ~%]
@@ -110,12 +131,18 @@ role [% INCLUDE printRoot %] {
           [%~# C.f. AST/Value.pm, where concatenation of scopedName is already done, so that scopedName looks like a lexeme ~%]
           [%~# If scopedName begins with '::', this is an absolute scope, otherwise a relative scope ~%]
           [%~ identifier = INCLUDE getLexeme item=scopedName; ~%]
-[% loop.index() > 0 ? ', ' : ''; %]
+[%~#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[%~ loop.index() > 0 ? ', ' : ''; ~%]
+[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
           [%~ IF identifier.match('^::') ~%]
-[% identifier ~%]
+[%~#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[%~ identifier ~%]
+[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
           [%~ ELSE ~%]
             [%~ INCLUDE pushScope what=identifier ~%]
-[% INCLUDE printScope ~%]
+[%~#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[%~ INCLUDE printScope | trim ~%]
+[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
             [%~ INCLUDE popScope ~%]
           [%~ END ~%]
         [%~ END ~%]
@@ -128,8 +155,10 @@ role [% INCLUDE printRoot %] {
         [%~ IF NOT blessed(firstItem) ~%]
           [%~ IF firstItem == 'typedef' ~%]
             [%~ typeDeclarator = rhs.1 ~%]
-[% sp(indent) %]subtype [%~ INCLUDE ast2perl item=typeDeclarator indent=indent+2 %];
-[%~ RETURN ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]subtype [% INCLUDE ast2perl item=typeDeclarator newindent=indent+2 | trim %];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+            [%~ RETURN ~%]
           [%~ END ~%]
         [%~ END ~%]
 
@@ -138,86 +167,271 @@ role [% INCLUDE printRoot %] {
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ simpleTypeSpec = rhs.2 ~%]
-        [%~ IF rhs.max >= 4 ~%]
-          [%~ positiveIntConst = INCLUDE ast2perl item=rhs.4 ~%]
+        [%~ IF rhs.max == 4 ~%]
+          [%~ positiveIntConst = INCLUDE ast2perl item=rhs.4 | trim ~%]
         [%~ ELSE ~%]
           [%~ positiveIntConst = -1 ~%]
         [%~ END ~%]
-[% sp(indent) %]ArrayRef[[%~ INCLUDE ast2perl item=simpleTypeSpec indent=indent+2 %]]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]ArrayRef[
+[% INCLUDE ast2perl item=simpleTypeSpec newindent=indent+2 | trim ~%]
+[% sp(indent) %]]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ IF positiveIntConst >= 0 ~%]
-[% sp(indent) %], where {scalar(@_) <= [%~ positiveIntConst ~%]}
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %], where {scalar(@_) <= [% positiveIntConst %]}
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ END ~%]
-[%~ RETURN ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::floatingPtType' ~%]
       [%~################################################ ~%]
-Num
-[%~# No need to go further ~%]
-[%~ RETURN ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]Num
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~# No need to go further ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::signedInt' ~%]
       [%~################################################ ~%]
-Int
-[%~# No need to go further ~%]
-[%~ RETURN ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]Int
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~# No need to go further ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
-      [%~ CASE 'IDL::AST::signedInt' ~%]
+      [%~ CASE 'IDL::AST::unsignedInt' ~%]
+      [%~################################################ ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]PositiveOrZeroInt
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~# No need to go further ~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
       [%~ CASE 'IDL::AST::octetType' ~%]
+      [%~# Note: octetType is binary data ~%]
       [%~################################################ ~%]
-PositiveOrZeroInt
-[%~# No need to go further ~%]
-[%~ RETURN ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]Defined
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~# No need to go further ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::anyType' ~%]
       [%~################################################ ~%]
-Any
-[%~# No need to go further ~%]
-[%~ RETURN ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]Any
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~# No need to go further ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::objectType' ~%]
       [%~################################################ ~%]
-Object
-[%~# No need to go further ~%]
-[%~ RETURN ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]Object
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~# No need to go further ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::charType' ~%]
+      [%~################################################ ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]Str
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~# No need to go further ~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
       [%~ CASE 'IDL::AST::wideCharType' ~%]
       [%~################################################ ~%]
-Str
-[%~# No need to go further ~%]
-[%~ RETURN ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]Str
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~# No need to go further ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::booleanType' ~%]
       [%~################################################ ~%]
-Bool
-[%~# No need to go further ~%]
-[%~ RETURN ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]Bool
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~# No need to go further ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::orExpr' ~%]
-      [%~ CASE 'IDL::AST::xorExpr' ~%]
-      [%~ CASE 'IDL::AST::andExpr' ~%]
-      [%~ CASE 'IDL::AST::shiftExpr' ~%]
-      [%~ CASE 'IDL::AST::addExpr' ~%]
-      [%~ CASE 'IDL::AST::multExpr' ~%]
       [%~################################################ ~%]
-        [%~ rhs = as_list(item) ~%]
-        [%~ IF rhs.max >= 2 ~%]
-[%~ INCLUDE getLexeme item=rhs.1 ~%]
-        [%~ END ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% INCLUDE xxxExpr %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::xorExpr' ~%]
+      [%~################################################ ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% INCLUDE xxxExpr %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::andExpr' ~%]
+      [%~################################################ ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% INCLUDE xxxExpr %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::shiftExpr' ~%]
+      [%~################################################ ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% INCLUDE xxxExpr %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::addExpr' ~%]
+      [%~################################################ ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% INCLUDE xxxExpr %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::multExpr' ~%]
       [%~################################################ ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% INCLUDE xxxExpr %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::constDcl' ~%]
+      [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
-[%~ INCLUDE getLexeme item=rhs.0 ~%]
+        [%~ constType = INCLUDE ast2perl item=rhs.1 | trim ~%]
+        [%~ identifier = INCLUDE getLexeme item=rhs.2 | trim ~%]
+        [%~ constExp = INCLUDE ast2perl item=rhs.4 | trim ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]has '[%~ identifier ~%]' => (isa => '[%~ constType ~%]', is => 'ro', default => [% constExp ~%]);
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::unaryOperator' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %][% INCLUDE getLexeme item=rhs.0 | trim %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::primaryExpr' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ IF rhs.max == 2 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %](
+[% INCLUDE ast2perl item=rhs.1 newindent=indent+2 %]
+[% sp(indent) %])
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
+        [%~ END ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::scopedName' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %][% lexeme(item) %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::integerLiteral' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %][% INCLUDE getLexeme %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::fixedPtLiteral' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %][% INCLUDE getLexeme %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::floatingPtLiteral' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %][% INCLUDE getLexeme %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::stringLiteral' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]"[% INCLUDE getLexeme item=rhs.0 %]"
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::wideStringLiteral' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]"[% INCLUDE getLexeme item=rhs.0 %]"
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::characterLiteral' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]"[% INCLUDE getLexeme item=rhs.0 %]"
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::booleanLiteral' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ booleanLiteral = INCLUDE getLexeme item=rhs.0 | trim ~%]
+        [%~ IF booleanLiteral == 'TRUE' ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]1
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ ELSE ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]0
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ END ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::valueForwardDcl' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ booleanLiteral = INCLUDE getLexeme item=rhs.0 | trim ~%]
+        [%~ IF booleanLiteral == 'TRUE' ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]1
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ ELSE ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]0
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ END ~%]
 
       [%~ CASE DEFAULT ~%]
 
