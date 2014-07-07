@@ -50,7 +50,7 @@ use MooseX::ABCD;
 [%~ END ~%]
 
 [%~ BLOCK ast2perl ~%]
-  [%~ indent = newindent || indent ~%]
+  [% indent = newindent || indent ~%]
   [%~ blessedName = blessed(item) ~%]
   [%~ IF blessedName ~%]
     [%~ SWITCH blessedName ~%]
@@ -125,8 +125,7 @@ use MooseX::ABCD;
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::interfaceNameListMany' ~%]
       [%~################################################ ~%]
-        [%~ rhs = as_list(item) ~%]
-        [%~ FOREACH interfaceName IN rhs ~%]
+        [%~ FOREACH interfaceName IN as_list(item) ~%]
           [%~ scopedName = as_list(interfaceName) ~%]
           [%~# C.f. AST/Value.pm, where concatenation of scopedName is already done, so that scopedName looks like a lexeme ~%]
           [%~# If scopedName begins with '::', this is an absolute scope, otherwise a relative scope ~%]
@@ -148,6 +147,18 @@ use MooseX::ABCD;
         [%~ END ~%]
 
       [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::declaratorListMany' ~%]
+      [%~################################################ ~%]
+        [%~ FOREACH rhs IN as_list(item) ~%]
+          [%~ declarator = INCLUDE ast2perl item=rhs | trim ~%]
+[%~#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[%~ loop.index() > 0 ? ', ' : ''; ~%]
+[%~ declarator ~%]
+[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ END ~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
       [%~ CASE 'IDL::AST::typeDcl' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
@@ -156,7 +167,7 @@ use MooseX::ABCD;
           [%~ IF firstItem == 'typedef' ~%]
             [%~ typeDeclarator = rhs.1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]subtype [% INCLUDE ast2perl item=typeDeclarator newindent=indent+2 | trim %];
+[% sp(indent) %][% INCLUDE ast2perl item=typeDeclarator newindent=indent+2 | trim %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
             [%~ RETURN ~%]
           [%~ END ~%]
@@ -173,9 +184,7 @@ use MooseX::ABCD;
           [%~ positiveIntConst = -1 ~%]
         [%~ END ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]ArrayRef[
-[% INCLUDE ast2perl item=simpleTypeSpec newindent=indent+2 | trim ~%]
-[% sp(indent) %]]
+[% sp(indent) %]ArrayRef[[%~ INCLUDE ast2perl item=simpleTypeSpec | trim ~%]]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ IF positiveIntConst >= 0 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
@@ -329,7 +338,6 @@ use MooseX::ABCD;
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::unaryOperator' ~%]
       [%~################################################ ~%]
-        [%~ rhs = as_list(item) ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %][% INCLUDE getLexeme item=rhs.0 | trim %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -344,21 +352,26 @@ use MooseX::ABCD;
 [% INCLUDE ast2perl item=rhs.1 newindent=indent+2 %]
 [% sp(indent) %])
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-        [%~ RETURN ~%]
+          [%~ RETURN ~%]
         [%~ END ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::scopedName' ~%]
       [%~################################################ ~%]
-        [%~ rhs = as_list(item) ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %][% lexeme(item) %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 
       [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::identifier' ~%]
+      [%~################################################ ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %][% INCLUDE getLexeme %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+
+      [%~################################################ ~%]
       [%~ CASE 'IDL::AST::integerLiteral' ~%]
       [%~################################################ ~%]
-        [%~ rhs = as_list(item) ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %][% INCLUDE getLexeme %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -366,7 +379,6 @@ use MooseX::ABCD;
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::fixedPtLiteral' ~%]
       [%~################################################ ~%]
-        [%~ rhs = as_list(item) ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %][% INCLUDE getLexeme %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -374,7 +386,6 @@ use MooseX::ABCD;
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::floatingPtLiteral' ~%]
       [%~################################################ ~%]
-        [%~ rhs = as_list(item) ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %][% INCLUDE getLexeme %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -382,25 +393,22 @@ use MooseX::ABCD;
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::stringLiteral' ~%]
       [%~################################################ ~%]
-        [%~ rhs = as_list(item) ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]"[% INCLUDE getLexeme item=rhs.0 %]"
+[% sp(indent) %]"[% INCLUDE getLexeme %]"
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::wideStringLiteral' ~%]
       [%~################################################ ~%]
-        [%~ rhs = as_list(item) ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]"[% INCLUDE getLexeme item=rhs.0 %]"
+[% sp(indent) %]"[% INCLUDE getLexeme %]"
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::characterLiteral' ~%]
       [%~################################################ ~%]
-        [%~ rhs = as_list(item) ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]"[% INCLUDE getLexeme item=rhs.0 %]"
+[% sp(indent) %]"[% INCLUDE getLexeme %]"
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 
       [%~################################################ ~%]
@@ -432,6 +440,31 @@ use MooseX::ABCD;
 [% sp(indent) %]0
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ END ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::valueBoxDcl' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ identifier = INCLUDE getLexeme item=rhs.1 | trim ~%]
+        [%~ typeSpec = INCLUDE ast2perl item=rhs.2 | trim ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]subtype '[% identifier %]', as '[% typeSpec %]';
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::typeDeclarator' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ typeSpec = INCLUDE ast2perl item=rhs.0 | trim ~%]
+        [%~ declarators = INCLUDE ast2perl item=rhs.1 | trim ~%]
+        [%~# We are lucky that only this rule correspond to typedef -; ~%]
+        [%~ FOREACH declarator IN declarators.split(', ') ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% loop.index() > 0 ? nl : ''; sp(indent) %]subtype '[% declarator %]', as '[% typeSpec %]';
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ END ~%]
+        [%~ RETURN ~%]
 
       [%~ CASE DEFAULT ~%]
 
