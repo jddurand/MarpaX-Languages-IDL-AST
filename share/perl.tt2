@@ -1,9 +1,6 @@
 #!env perl
 
 use MooseX::Declare;
-use MooseX::Types::Structured;
-use MooseX::Types::Common::Numeric;
-use MooseX::ABCD;
 
 [% # The whole IDL file is describing what is "Role" in Moose terminology
    # Instead of requiring the ScalarUtil, Dumper etc... plugin, the following methods are explicitely provided by the caller:
@@ -63,8 +60,16 @@ use MooseX::ABCD;
         [%~ INCLUDE pushRoot what=identifier ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]role [% INCLUDE printRoot | trim  %] {
-[% sp(indent) %]  use MooseX::Interface;
-[% INCLUDE ast2perl item=as_list(item).3 newindent=indent+2 %]
+[% sp(indent+2) %]use MooseX::Interface;
+[% sp(indent+2) %]use Moose::Util::TypeConstraints;
+
+[% sp(indent+2) %]BEGIN {  # Compile-time availability of useful predefined subtypes and sugar
+[% sp(indent+2) %]  use MooseX::Types::Structured qw/Dict/;
+[% sp(indent+2) %]  use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
+[% sp(indent+2) %]  use MooseX::Types::Moose qw/Num Int Defined Any Object Str Bool ArrayRef/;
+[% sp(indent+2) %]}
+
+[% sp(indent+2) %][% INCLUDE ast2perl item=as_list(item).3 newindent=indent+2 | trim %]
 [% sp(indent) %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE popRoot ~%]
@@ -80,6 +85,69 @@ use MooseX::ABCD;
 [% sp(indent) %]with '[% INCLUDE printScope | trim %]';
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE popScope ~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::exceptDcl' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ identifier = INCLUDE getLexeme item=rhs.1 | trim ~%]
+        [%~ INCLUDE pushScope what=identifier | trim ~%]
+        [%~ memberAny = rhs.3 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% nl %]
+[% sp(indent) %]role [% INCLUDE printScope | trim %] with (Throwable) {
+
+[% sp(indent+2) %]BEGIN {  # Compile-time availability of useful predefined subtypes and sugar
+[% sp(indent+2) %]  use MooseX::Types::Structured qw/Dict/;
+[% sp(indent+2) %]  use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
+[% sp(indent+2) %]  use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
+[% sp(indent+2) %]}
+
+[% sp(indent+2) %][% INCLUDE ast2perl memberCtx='attribute' item=memberAny newindent=indent+2 | trim %]
+[% sp(indent) %]}
+[% nl %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ INCLUDE popScope ~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::memberList' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]Dict[
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ FOREACH member IN rhs ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %][% INCLUDE ast2perl memberCtx='structure' item=member | trim %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ END ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::member' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ typeSpec = INCLUDE ast2perl item=rhs.0 |trim ~%]
+        [%~ declarators = INCLUDE ast2perl item=rhs.1 |trim ~%]
+        [%~ IF memberCtx == 'attribute' ~%]
+          [%~ FOREACH declarator IN declarators.split(', ') ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% loop.index() > 0 ? nl : '' %][% sp(indent) %]has '[% declarator %]' => (is => 'rw', isa => [% typeSpec %]);
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+          [%~ END ~%]
+        [%~ ELSIF memberCtx == 'structure' ~%]
+          [%~ FOREACH declarator IN declarators.split(', ') ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% loop.index() > 0 ? nl : '' %][% sp(indent) %][% declarator %] => [% typeSpec %],
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+          [%~ END ~%]
+        [%~ END ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::interfaceDcl' ~%]
@@ -90,6 +158,13 @@ use MooseX::ABCD;
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% INCLUDE ast2perl item=interfaceHeader %] {
 [% sp(indent+2) %]use MooseX::Interface;
+
+[% sp(indent+2) %]BEGIN {  # Compile-time availability of useful predefined subtypes and sugar
+[% sp(indent+2) %]  use MooseX::Types::Structured qw/Dict/;
+[% sp(indent+2) %]  use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
+[% sp(indent+2) %]  use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
+[% sp(indent+2) %]}
+
 [% sp(indent) %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE popScope ~%]
@@ -100,14 +175,12 @@ use MooseX::ABCD;
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE getLexeme item=rhs.2 | trim ~%]
-        [%~ INCLUDE pushScope what=identifier ~%]
+        [%~ interfaceInheritanceSpecMaybe = INCLUDE ast2perl item=rhs.3 | trim %]
+        [%~# We would like the with () on the same line, so it is done explicitely here ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% nl %]
-[% sp(indent) %]role [% INCLUDE printScope | trim %] 
-        [%~# We would like the with () on the same line, so it is done explicitely here ~%]
-        [%~ INCLUDE popScope ~%]
-        [%~ interfaceInheritanceSpecMaybe = rhs.3 ~%]
-[%~ INCLUDE ast2perl item=interfaceInheritanceSpecMaybe | trim ~%]
+[% sp(indent) %]role [% INCLUDE pushScope what=identifier; INCLUDE printScope | trim; INCLUDE popScope %][% interfaceInheritanceSpecMaybe ? sp(1) _ interfaceInheritanceSpecMaybe : '' %]
+[% nl %]
 [%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE pushScope what=identifier ~%]
         [%~ RETURN ~%]
@@ -119,7 +192,7 @@ use MooseX::ABCD;
         [%~ interfaceNameListMany = rhs.1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]with ([%~ INCLUDE ast2perl item=interfaceNameListMany | trim ~%])
-[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ RETURN ~%]
 
       [%~################################################ ~%]
@@ -167,7 +240,7 @@ use MooseX::ABCD;
           [%~ IF firstItem == 'typedef' ~%]
             [%~ typeDeclarator = rhs.1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %][% INCLUDE ast2perl item=typeDeclarator newindent=indent+2 | trim %]
+[% sp(indent) %][% INCLUDE ast2perl item=typeDeclarator | trim %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
             [%~ RETURN ~%]
           [%~ END ~%]
@@ -331,7 +404,7 @@ use MooseX::ABCD;
         [%~ identifier = INCLUDE getLexeme item=rhs.2 | trim ~%]
         [%~ constExp = INCLUDE ast2perl item=rhs.4 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]has '[%~ identifier ~%]' => (isa => '[%~ constType ~%]', is => 'ro', default => [% constExp ~%]);
+[% sp(indent) %]has '[%~ identifier ~%]' => (isa => [% constType %], is => 'ro', default => [% constExp ~%]);
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ RETURN ~%]
 
@@ -448,7 +521,18 @@ use MooseX::ABCD;
         [%~ identifier = INCLUDE getLexeme item=rhs.1 | trim ~%]
         [%~ typeSpec = INCLUDE ast2perl item=rhs.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]subtype '[% identifier %]', as '[% typeSpec %]';
+[% sp(indent) %]subtype '[% identifier %]', as [% typeSpec %];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
+
+      [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::structType' ~%]
+      [%~################################################ ~%]
+        [%~ rhs = as_list(item) ~%]
+        [%~ identifier = INCLUDE getLexeme item=rhs.1 | trim ~%]
+        [%~ memberList = INCLUDE ast2perl memberCtx='structure' item=rhs.3 newindent=indent+2 | trim %]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]subtype '[% identifier %]', as [% memberList %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ RETURN ~%]
 
@@ -461,7 +545,7 @@ use MooseX::ABCD;
         [%~# We are lucky that only this rule correspond to typedef -; ~%]
         [%~ FOREACH declarator IN declarators.split(', ') ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% loop.index() > 0 ? nl : ''; sp(indent) %]subtype '[% declarator %]', as '[% typeSpec %]';
+[% loop.index() > 0 ? nl : '' %][% sp(indent) %]subtype '[% declarator %]', as [% typeSpec %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ END ~%]
         [%~ RETURN ~%]

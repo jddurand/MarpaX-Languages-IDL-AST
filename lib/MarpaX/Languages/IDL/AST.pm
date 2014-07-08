@@ -312,10 +312,10 @@ lexeme default = action => [ start, length, value ] latm => 1# bless => ::name
 <module>                     ::= 'module' <identifier> '{' <definitionMany> '}'
 <interface>                  ::= <interfaceDcl>
                              |   <forwardDcl>
-<interfaceDcl>              ::= <interfaceHeader> '{' <interfaceBody> '}'
-<forwardDcl>                ::= <abstractOrLocalMaybe> 'interface' <identifier>
-<interfaceHeader>           ::= <abstractOrLocalMaybe> 'interface' <identifier> <interfaceInheritanceSpecMaybe>
-<interfaceBody>             ::= <export>*
+<interfaceDcl>               ::= <interfaceHeader> '{' <interfaceBody> '}'
+<forwardDcl>                 ::= <abstractOrLocalMaybe> 'interface' <identifier>
+<interfaceHeader>            ::= <abstractOrLocalMaybe> 'interface' <identifier> <interfaceInheritanceSpecMaybe>
+<interfaceBody>              ::= <export>*
 <export>                     ::= <typeDcl> ';'
                              |   <constDcl> ';'
                              |   <exceptDcl> ';'
@@ -323,33 +323,33 @@ lexeme default = action => [ start, length, value ] latm => 1# bless => ::name
                              |   <opDcl> ';'
                              |   <typeIdDcl> ';'
                              |   <typePrefixDcl> ';'
-<interfaceInheritanceSpec> ::= ':' <interfaceNameListMany>
-<interfaceName>             ::= <scopedName>
-#<scopedName>                ::= <identifier>
+<interfaceInheritanceSpec>   ::= ':' <interfaceNameListMany>
+<interfaceName>              ::= <scopedName>
+#<scopedName>                 ::= <identifier>
 #                             |   '::' <identifier>
 #                             |   <scopedName> '::' <identifier>
-<scopedName>                ::= <identifier>+ separator => <coloncolon>               action => _scopedName
+<scopedName>                 ::= <identifier>+ separator => <coloncolon>               action => _scopedName
 <value>                      ::= <valueDcl>
                              |   <valueAbsDcl>
                              |   <valueBoxDcl>
                              |   <valueForwardDcl>
-<valueForwardDcl>          ::= <abstractMaybe> 'valuetype' <identifier>
-<valueBoxDcl>              ::= 'valuetype' <identifier> <typeSpec>
-<valueAbsDcl>              ::= 'abstract' 'valuetype' <identifier> <valueInheritanceSpecMaybe> '{' <exportAny> '}'
-<valueDcl>                  ::= <valueHeader> '{' <valueElementAny> '}'
-<valueHeader>               ::= <customMaybe> 'valuetype' <identifier> <valueInheritanceSpecMaybe>
-<valueInheritanceSpec>     ::= <valueInheritanceSpec1ValuesMaybe> <valueInheritanceSpec2InterfacesMaybe>
-<valueName>                 ::= <scopedName>
-<valueElement>              ::= <export>
+<valueForwardDcl>            ::= <abstractMaybe> 'valuetype' <identifier>
+<valueBoxDcl>                ::= 'valuetype' <identifier> <typeSpec>
+<valueAbsDcl>                ::= 'abstract' 'valuetype' <identifier> <valueInheritanceSpecMaybe> '{' <exportAny> '}'
+<valueDcl>                   ::= <valueHeader> '{' <valueElementAny> '}'
+<valueHeader>                ::= <customMaybe> 'valuetype' <identifier> <valueInheritanceSpecMaybe>
+<valueInheritanceSpec>       ::= <valueInheritanceSpec1ValuesMaybe> <valueInheritanceSpec2InterfacesMaybe>
+<valueName>                  ::= <scopedName>
+<valueElement>               ::= <export>
                              |   <stateMember>
                              |   <initDcl>
-<stateMember>               ::= <publicOrPrivate> <typeSpec> <declarators> ';'
-<initDcl>                   ::= 'factory' <identifier> '(' <initParamDeclsMaybe> ')' <raisesExprMaybe> ';'
-<initParamDecls>           ::= <initParamDeclListMany>
-<initParamDecl>            ::= <initParamAttribute> <paramTypeSpec> <simpleDeclarator>
-<initParamAttribute>       ::= 'in'
-<constDcl>                  ::= 'const' <constType> <identifier> '=' <constExp>
-<constType>                 ::= <integerType>
+<stateMember>                ::= <publicOrPrivate> <typeSpec> <declarators> ';'
+<initDcl>                    ::= 'factory' <identifier> '(' <initParamDeclsMaybe> ')' <raisesExprMaybe> ';'
+<initParamDecls>             ::= <initParamDeclListMany>
+<initParamDecl>              ::= <initParamAttribute> <paramTypeSpec> <simpleDeclarator>
+<initParamAttribute>         ::= 'in'
+<constDcl>                   ::= 'const' <constType> <identifier> '=' <constExp>
+<constType>                  ::= <integerType>
                              |   <charType>
                              |   <wideCharType>
                              |   <booleanType>
@@ -359,29 +359,29 @@ lexeme default = action => [ start, length, value ] latm => 1# bless => ::name
                              |   <fixedPtConstType>
                              |   <scopedName>
                              |   <octetType>
-<constExp>                  ::= <orExpr>
-<orExpr>                    ::= <xorExpr>
+<constExp>                   ::= <orExpr>
+<orExpr>                     ::= <xorExpr>
                              |   <orExpr> '|' <xorExpr>
-<xorExpr>                   ::= <andExpr>
+<xorExpr>                    ::= <andExpr>
                              |   <xorExpr> '^' <andExpr>
-<andExpr>                   ::= <shiftExpr>
+<andExpr>                    ::= <shiftExpr>
                              |   <andExpr> '&' <shiftExpr>
-<shiftExpr>                 ::= <addExpr>
+<shiftExpr>                  ::= <addExpr>
                              |   <shiftExpr> '>>' <addExpr>
                              |   <shiftExpr> '<<' <addExpr>
-<addExpr>                   ::= <multExpr>
+<addExpr>                    ::= <multExpr>
                              |   <addExpr> '+' <multExpr>
                              |   <addExpr> '-' <multExpr>
-<multExpr>                  ::= <unaryExpr>
+<multExpr>                   ::= <unaryExpr>
                              |   <multExpr> '*' <unaryExpr>
                              |   <multExpr> '/' <unaryExpr>
                              |   <multExpr> '%' <unaryExpr>
-<unaryExpr>                 ::= <unaryOperator> <primaryExpr>
+<unaryExpr>                  ::= <unaryOperator> <primaryExpr>
                              | <primaryExpr>
-<unaryOperator>             ::= '-'
+<unaryOperator>              ::= '-'
                              | '+'
                              | '~'
-<primaryExpr>               ::= <scopedName>
+<primaryExpr>                ::= <scopedName>
                              |   <literal>
                              |   '(' <constExp> ')'
 <literal>                    ::= <integerLiteral>
@@ -392,22 +392,22 @@ lexeme default = action => [ start, length, value ] latm => 1# bless => ::name
                              |   <fixedPtLiteral>
                              |   <floatingPtLiteral>
                              |   <booleanLiteral>
-<booleanLiteral>            ::= 'TRUE'
+<booleanLiteral>             ::= 'TRUE'
                              |   'FALSE'
-<positiveIntConst>         ::= <constExp>
-<typeDcl>                   ::= 'typedef' <typeDeclarator>
+<positiveIntConst>           ::= <constExp>
+<typeDcl>                    ::= 'typedef' <typeDeclarator>
                              |   <structType>
                              |   <unionType>
                              |   <enumType>
                              |   'native' <simpleDeclarator>
                              |   <constrForwardDecl>
-<typeDeclarator>            ::= <typeSpec> <declarators>
-<typeSpec>                  ::= <simpleTypeSpec>
+<typeDeclarator>             ::= <typeSpec> <declarators>
+<typeSpec>                   ::= <simpleTypeSpec>
                              |   <constrTypeSpec>
-<simpleTypeSpec>           ::= <baseTypeSpec>
+<simpleTypeSpec>             ::= <baseTypeSpec>
                              |   <templateTypeSpec>
                              |   <scopedName>
-<baseTypeSpec>             ::= <floatingPtType>
+<baseTypeSpec>               ::= <floatingPtType>
                              |   <integerType>
                              |   <charType>
                              |   <wideCharType>
@@ -416,147 +416,147 @@ lexeme default = action => [ start, length, value ] latm => 1# bless => ::name
                              |   <anyType>
                              |   <objectType>
                              |   <valueBaseType>
-<templateTypeSpec>         ::= <sequenceType>
+<templateTypeSpec>           ::= <sequenceType>
                              |   <stringType>
                              |   <wideStringType>
                              |   <fixedPtType>
-<constrTypeSpec>           ::= <structType>
+<constrTypeSpec>             ::= <structType>
                              |   <unionType>
                              |   <enumType>
 <declarators>                ::= <declaratorListMany>
 <declarator>                 ::= <simpleDeclarator>
                              |   <complexDeclarator>
-<simpleDeclarator>          ::= <identifier>
-<complexDeclarator>         ::= <arrayDeclarator>
-<floatingPtType>           ::= 'float'
+<simpleDeclarator>           ::= <identifier>
+<complexDeclarator>          ::= <arrayDeclarator>
+<floatingPtType>             ::= 'float'
                              |   'double'
                              |   'long' 'double'
-<integerType>               ::= <signedInt>
+<integerType>                ::= <signedInt>
                              |   <unsignedInt>
-<signedInt>                 ::= <signedShortInt>
+<signedInt>                  ::= <signedShortInt>
                              |   <signedLongInt>
                              |   <signedLonglongInt>
-<signedShortInt>           ::= 'short'
-<signedLongInt>            ::= 'long'
-<signedLonglongInt>        ::= 'long' 'long'
-<unsignedInt>               ::= <unsignedShortInt>
+<signedShortInt>             ::= 'short'
+<signedLongInt>              ::= 'long'
+<signedLonglongInt>          ::= 'long' 'long'
+<unsignedInt>                ::= <unsignedShortInt>
                              |   <unsignedLongInt>
                              |   <unsignedLonglongInt>
-<unsignedShortInt>         ::= 'unsigned' 'short'
-<unsignedLongInt>          ::= 'unsigned' 'long'
-<unsignedLonglongInt>      ::= 'unsigned' 'long' 'long'
-<charType>                  ::= 'char'
-<wideCharType>             ::= 'wchar'
-<booleanType>               ::= 'boolean'
-<octetType>                 ::= 'octet'
-<anyType>                   ::= 'any'
-<objectType>                ::= 'Object'
-<structType>                ::= 'struct' <identifier> '{' <memberList> '}'
-<memberList>                ::= <member>+
+<unsignedShortInt>           ::= 'unsigned' 'short'
+<unsignedLongInt>            ::= 'unsigned' 'long'
+<unsignedLonglongInt>        ::= 'unsigned' 'long' 'long'
+<charType>                   ::= 'char'
+<wideCharType>               ::= 'wchar'
+<booleanType>                ::= 'boolean'
+<octetType>                  ::= 'octet'
+<anyType>                    ::= 'any'
+<objectType>                 ::= 'Object'
+<structType>                 ::= 'struct' <identifier> '{' <memberList> '}'
+<memberList>                 ::= <member>+
 <member>                     ::= <typeSpec> <declarators> ';'
-<unionType>                 ::= 'union' <identifier> 'switch' '(' <switchTypeSpec> ')' '{' <switchBody> '}'
-<switchTypeSpec>           ::=<integerType>
+<unionType>                  ::= 'union' <identifier> 'switch' '(' <switchTypeSpec> ')' '{' <switchBody> '}'
+<switchTypeSpec>             ::=<integerType>
                              | <charType>
                              | <booleanType>
                              | <enumType>
                              | <scopedName>
-<switchBody>                ::= <case>+
+<switchBody>                 ::= <case>+
 <case>                       ::= <caseLabelAny> <elementSpec> ';'
-<caseLabel>                 ::= 'case' <constExp> ':'
+<caseLabel>                  ::= 'case' <constExp> ':'
                              | 'default' ':'
-<elementSpec>               ::= <typeSpec> <declarator>
-<enumType>                  ::= 'enum' <identifier> '{' <enumeratorListMany> '}'
+<elementSpec>                ::= <typeSpec> <declarator>
+<enumType>                   ::= 'enum' <identifier> '{' <enumeratorListMany> '}'
 <enumerator>                 ::= <identifier>
-<sequenceType>              ::= 'sequence' '<' <simpleTypeSpec> ',' <positiveIntConst> '>'
+<sequenceType>               ::= 'sequence' '<' <simpleTypeSpec> ',' <positiveIntConst> '>'
                              | 'sequence' '<' <simpleTypeSpec> '>'
-<stringType>                ::= 'string' '<' <positiveIntConst> '>'
+<stringType>                 ::= 'string' '<' <positiveIntConst> '>'
                              | 'string'
-<wideStringType>           ::= 'wstring' '<' <positiveIntConst> '>'
+<wideStringType>             ::= 'wstring' '<' <positiveIntConst> '>'
                              | 'wstring'
-<arrayDeclarator>           ::= <identifier> <fixedArraySizeMany>
-<fixedArraySize>           ::= '[' <positiveIntConst> ']'
-<attrDcl>                   ::= <readonlyAttrSpec>
+<arrayDeclarator>            ::= <identifier> <fixedArraySizeMany>
+<fixedArraySize>             ::= '[' <positiveIntConst> ']'
+<attrDcl>                    ::= <readonlyAttrSpec>
                              |   <attrSpec>
-<exceptDcl>                 ::= 'exception' <identifier> '{' <memberAny> '}'
-<opDcl>                     ::= <opAttributeMaybe> <opTypeSpec> <identifier> <parameterDcls> <raisesExprMaybe> <contextExprMaybe>
-<opAttribute>               ::= 'oneway'
-<opTypeSpec>               ::= <paramTypeSpec>
+<exceptDcl>                  ::= 'exception' <identifier> '{' <memberAny> '}'
+<opDcl>                      ::= <opAttributeMaybe> <opTypeSpec> <identifier> <parameterDcls> <raisesExprMaybe> <contextExprMaybe>
+<opAttribute>                ::= 'oneway'
+<opTypeSpec>                 ::= <paramTypeSpec>
                              | 'void'
-<parameterDcls>             ::= '(' <paramDclListMany> ')'
+<parameterDcls>              ::= '(' <paramDclListMany> ')'
                              |   '(' ')'
-<paramDcl>                  ::= <paramAttribute> <paramTypeSpec> <simpleDeclarator>
-<paramAttribute>            ::='in'
+<paramDcl>                   ::= <paramAttribute> <paramTypeSpec> <simpleDeclarator>
+<paramAttribute>             ::='in'
                              |   'out'
                              |   'inout'
-<raisesExpr>                ::= 'raises' '(' <scopedNameListMany> ')'
-<contextExpr>               ::= 'context' '(' <stringLiteralListMany> ')'
-<paramTypeSpec>            ::= <baseTypeSpec>
+<raisesExpr>                 ::= 'raises' '(' <scopedNameListMany> ')'
+<contextExpr>                ::= 'context' '(' <stringLiteralListMany> ')'
+<paramTypeSpec>              ::= <baseTypeSpec>
                              | <stringType>
                              | <wideStringType>
                              | <scopedName>
-<fixedPtType>              ::= 'fixed' '<' <positiveIntConst> ',' <positiveIntConst> '>'
-<fixedPtConstType>        ::= 'fixed'
-<valueBaseType>            ::= 'ValueBase'
-<constrForwardDecl>        ::= 'struct' <identifier>
+<fixedPtType>                ::= 'fixed' '<' <positiveIntConst> ',' <positiveIntConst> '>'
+<fixedPtConstType>           ::= 'fixed'
+<valueBaseType>              ::= 'ValueBase'
+<constrForwardDecl>          ::= 'struct' <identifier>
                              |   'union' <identifier>
 <import>                     ::= 'import' <importedScope> ';'
-<importedScope>             ::= <scopedName>
+<importedScope>              ::= <scopedName>
                              |   <stringLiteral>
-<typeIdDcl>                ::= 'typeid' <scopedName> <stringLiteral>
-<typePrefixDcl>            ::= 'typeprefix' <scopedName> <stringLiteral>
-<readonlyAttrSpec>         ::= 'readonly' 'attribute' <paramTypeSpec> <readonlyAttrDeclarator>
-<readonlyAttrDeclarator>   ::= <simpleDeclarator> <raisesExpr>
+<typeIdDcl>                  ::= 'typeid' <scopedName> <stringLiteral>
+<typePrefixDcl>              ::= 'typeprefix' <scopedName> <stringLiteral>
+<readonlyAttrSpec>           ::= 'readonly' 'attribute' <paramTypeSpec> <readonlyAttrDeclarator>
+<readonlyAttrDeclarator>     ::= <simpleDeclarator> <raisesExpr>
                              |   <simpleDeclaratorListMany>
-<attrSpec>                  ::= 'attribute' <paramTypeSpec> <attrDeclarator>
-<attrDeclarator>            ::= <simpleDeclarator> <attrRaisesExpr>
+<attrSpec>                   ::= 'attribute' <paramTypeSpec> <attrDeclarator>
+<attrDeclarator>             ::= <simpleDeclarator> <attrRaisesExpr>
                              |   <simpleDeclaratorListMany>
-<attrRaisesExpr>           ::= <getExcepExpr> <setExcepExprMaybe>
+<attrRaisesExpr>             ::= <getExcepExpr> <setExcepExprMaybe>
                              |   <setExcepExpr>
-<getExcepExpr>             ::= 'getraises' <exceptionList>
-<setExcepExpr>             ::= 'setraises' <exceptionList>
-<exceptionList>             ::= '(' <scopedNameListMany> ')'
+<getExcepExpr>               ::= 'getraises' <exceptionList>
+<setExcepExpr>               ::= 'setraises' <exceptionList>
+<exceptionList>              ::= '(' <scopedNameListMany> ')'
 
 # NOTE: Grammar rules 1 through 111 with the exception of the last three lines of rule 2 constitutes the portion of IDL that
 # is not related to components.
 
 <component>                  ::= <componentDcl>
                              |   <componentForwardDcl>
-<componentForwardDcl>      ::= 'component' <identifier>
-<componentDcl>              ::= <componentHeader> '{' <componentBody> '}'
-<componentHeader>           ::= 'component' <identifier> <componentInheritanceSpecMaybe> <supportedInterfaceSpecMaybe>
-<supportedInterfaceSpec>   ::= 'supports' <scopedNameListMany>
-<componentInheritanceSpec> ::= ':' <scopedName>
-<componentBody>             ::= <componentExport>*
-<componentExport>           ::= <providesDcl> ';'
+<componentForwardDcl>        ::= 'component' <identifier>
+<componentDcl>               ::= <componentHeader> '{' <componentBody> '}'
+<componentHeader>            ::= 'component' <identifier> <componentInheritanceSpecMaybe> <supportedInterfaceSpecMaybe>
+<supportedInterfaceSpec>     ::= 'supports' <scopedNameListMany>
+<componentInheritanceSpec>   ::= ':' <scopedName>
+<componentBody>              ::= <componentExport>*
+<componentExport>            ::= <providesDcl> ';'
                              |   <usesDcl> ';'
                              |   <emitsDcl> ';'
                              |   <publishesDcl> ';'
                              |   <consumesDcl> ';'
                              |   <attrDcl> ';'
-<providesDcl>               ::= 'provides' <interfaceType> <identifier>
-<interfaceType>             ::= <scopedName>
+<providesDcl>                ::= 'provides' <interfaceType> <identifier>
+<interfaceType>              ::= <scopedName>
                              |   'Object'
-<usesDcl>                   ::= 'uses' <multipleMaybe> <interfaceType> <identifier>
-<emitsDcl>                  ::= 'emits' <scopedName> <identifier>
-<publishesDcl>              ::= 'publishes' <scopedName> <identifier>
-<consumesDcl>               ::= 'consumes' <scopedName> <identifier>
-<homeDcl>                   ::= <homeHeader> <homeBody>
-<homeHeader>                ::= 'home' <identifier> <homeInheritanceSpecMaybe> <supportedInterfaceSpecMaybe> 'manages' <scopedName> <primaryKeySpecMaybe>
-<homeIinheritanceSpec>      ::= ':' <scopedName>
-<primaryKeySpec>           ::= 'primarykey' <scopedName>
-<homeBody>                  ::= '{' <homeExportAny> '}'
-<homeExport>                ::= <export>
+<usesDcl>                    ::= 'uses' <multipleMaybe> <interfaceType> <identifier>
+<emitsDcl>                   ::= 'emits' <scopedName> <identifier>
+<publishesDcl>               ::= 'publishes' <scopedName> <identifier>
+<consumesDcl>                ::= 'consumes' <scopedName> <identifier>
+<homeDcl>                    ::= <homeHeader> <homeBody>
+<homeHeader>                 ::= 'home' <identifier> <homeInheritanceSpecMaybe> <supportedInterfaceSpecMaybe> 'manages' <scopedName> <primaryKeySpecMaybe>
+<homeIinheritanceSpec>       ::= ':' <scopedName>
+<primaryKeySpec>             ::= 'primarykey' <scopedName>
+<homeBody>                   ::= '{' <homeExportAny> '}'
+<homeExport>                 ::= <export>
                              |   <factoryDcl> ';'
                              |   <finderDcl> ';'
-<factoryDcl>                ::= 'factory' <identifier> '(' [ <initParamDecls> ] ')'  <raisesExprMaybe>
-<finderDcl>                 ::= 'finder' <identifier>  '(' [ <initParamDecls> ] ')'  <raisesExprMaybe>
+<factoryDcl>                 ::= 'factory' <identifier> '(' [ <initParamDecls> ] ')'  <raisesExprMaybe>
+<finderDcl>                  ::= 'finder' <identifier>  '(' [ <initParamDecls> ] ')'  <raisesExprMaybe>
 <event>                      ::= <eventDcl>
                              |   <eventAbsDcl>
                              |   <eventForwardDcl>
-<eventForwardDcl>          ::= <abstractMaybe> 'eventtype' <identifier>
-<eventAbsDcl>              ::= 'abstract' 'eventtype' <identifier> <valueInheritanceSpecMaybe> '{' <exportAny> '}'
-<eventDcl>                  ::= <eventHeader> '{' <valueElementAny> '}'
-<eventHeader>               ::= <customMaybe> 'eventtype' <identifier> <valueInheritanceSpecMaybe>
+<eventForwardDcl>            ::= <abstractMaybe> 'eventtype' <identifier>
+<eventAbsDcl>                ::= 'abstract' 'eventtype' <identifier> <valueInheritanceSpecMaybe> '{' <exportAny> '}'
+<eventDcl>                   ::= <eventHeader> '{' <valueElementAny> '}'
+<eventHeader>                ::= <customMaybe> 'eventtype' <identifier> <valueInheritanceSpecMaybe>
 
 <importAny> ::= <import>*
 <definitionMany> ::= <definition>+
