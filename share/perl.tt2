@@ -16,6 +16,23 @@
    # * The most important chapter of IDL specification is 5.20 about
    #   Scoping rules and Names resolution
    #
+   # - Identifiers:
+   # "An identifier can only be defined once in a scope. However, identifiers can be redefined in nested scopes. An identifier
+   #  declaring a module is considered to be defined by its first occurrence in a scope."
+   #
+   # This mean that have to be able to reuse identifiers from outer-scopes. Therefore the use of roles is not adequate
+   # and we have to use classes, that will systematically "extends" the class upper, and that will use a "has '+identifier".
+   #
+   # But:
+   #
+   # "An identifier from a surrounding scope is introduced into a scope if it is used in that scope. An identifier is not introduced
+   #  into a scope by merely being visible in that scope. The use of a scoped name introduces the identifier of the outermost
+   #  scope of the scoped name."
+   #
+   # So we left to delegation or explicitely remove accessors.
+   #
+   # - Types:
+
 ~%]
 #!env perl
 
