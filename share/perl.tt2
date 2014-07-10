@@ -20,8 +20,12 @@
    # "An identifier can only be defined once in a scope. However, identifiers can be redefined in nested scopes. An identifier
    #  declaring a module is considered to be defined by its first occurrence in a scope."
    #
-   # This mean that have to be able to reuse identifiers from outer-scopes. Therefore the use of roles is not adequate
-   # and we have to use classes, that will systematically "extends" the class upper, and that will use a "has '+identifier".
+   # This mean that have to be able to reuse identifiers from outer-scopes. Therefore the use of roles is not very adequate
+   # because we do not want role composition, but really inheritance behaviour.
+   # I.e. interfaces will systematically "extends" the class right upper to inherit everything from it, and use a "has '+identifier" in order
+   # to be able to completely overwrite an attribute.
+   #
+   # The only role that we will use is the generic inclusion of our type library
    #
    # But:
    #
@@ -36,7 +40,56 @@
 ~%]
 #!env perl
 
-[% 'package dom::_Types {
+[% # The whole IDL file is describing what is "Role" in Moose terminology
+   # Instead of requiring the ScalarUtil, Dumper etc... plugin, the following methods are explicitely provided by the caller:
+   # - Scalar::Utils::blessed()
+   # - Scalar::Utils::reftype()
+   # - Data::Dumper()
+   # TT2 does not like blessed arrays, we provide a method that return the content: as_list
+   # - as_list()
+   #
+   # As of time of of this writing, nested namespaces are not supported by MooseX::Declare
+   # so they are explicitely setted
+   #
+~%]
+[% PROCESS ast2perl item=ast indent=0 root=[] scope=[] identifierListHash={} %]
+[% nl %]
+[%~ RETURN ~%]
+
+[%~# Remember: AST is always a blessed array reference. Every item inside as well, EXCEPT hardcoded lexemes ~%]
+
+[%~ BLOCK printDump ~%]
+  [%~ PERL ~%]
+    use Data::Dumper;
+    print Dumper($stash->get('what'));
+  [%~ END ~%]
+[%~ END ~%]
+[%~ BLOCK printLexeme; lexeme(as_list(item.0));  END ~%]
+
+[%~ BLOCK pushRoot;  dummy = root.push(root.size == 0 ? what : '::' _ what);   END ~%]
+[%~ BLOCK printRoot; root.join('');            END ~%]
+[%~ BLOCK printFirstRoot; root.0;              END ~%]
+[%~ BLOCK popRoot;   dummy = root.pop();       END ~%]
+
+[%~ BLOCK pushScope;  dummy = scope.push('::' _ what); END ~%]
+[%~ BLOCK printScope; scope.join('');          END ~%]
+[%~ BLOCK popScope;   dummy = scope.pop();     END ~%]
+[%~ BLOCK printLastScope;  scope.reverse.0;    END ~%]
+
+[%~ BLOCK FQDN; INCLUDE printRoot; INCLUDE printScope; what ? (root.size == 0 ? what : '::' _ what) : '';  END ~%]
+[%~ BLOCK xxxExpr; ~%]
+  [%~ rhs = as_list(item) ~%]
+  [%~ IF rhs.max == 2 ~%]
+    [%~ INCLUDE ast2perl item=rhs.0 %]
+    [%~ INCLUDE printLexeme item=rhs.1 ~%]
+    [%~ INCLUDE ast2perl item=rhs.2 %]
+  [%~ ELSE ~%]
+    [%~ INCLUDE ast2perl item=rhs.0 %]
+  [%~ END ~%]
+[%~ END ~%]
+
+[%~ BLOCK printSetup ~%]
+[% 'package ' ~%][%~ INCLUDE withSetup ~%][%~ ' {
   use Moose::Role;
   use Moose::Util::TypeConstraints;
 
@@ -53,52 +106,12 @@
             : ()
           );
 };' %]
-
-[% # The whole IDL file is describing what is "Role" in Moose terminology
-   # Instead of requiring the ScalarUtil, Dumper etc... plugin, the following methods are explicitely provided by the caller:
-   # - Scalar::Utils::blessed()
-   # - Scalar::Utils::reftype()
-   # - Data::Dumper()
-   # TT2 does not like blessed arrays, we provide a method that return the content: as_list
-   # - as_list()
-   #
-   # As of time of of this writing, nested namespaces are not supported by MooseX::Declare
-   # so they are explicitely setted
-   #
-~%]
-[% PROCESS ast2perl item=ast indent=0 root=[] scope=[] %]
-[% nl %]
-[%~ RETURN ~%]
-
-[%~# Remember: AST is always a blessed array reference. Every item inside as well, EXCEPT hardcoded lexemes ~%]
-
-[%~ BLOCK printDump ~%]
-  [%~ PERL ~%]
-    use Data::Dumper;
-    print Dumper($stash->get('what'));
-  [%~ END ~%]
 [%~ END ~%]
-[%~ BLOCK getLexeme; lexeme(as_list(item.0));  END ~%]
 
-[%~ BLOCK pushRoot;  root.push(root.size == 0 ? what : '::' _ what);   END ~%]
-[%~ BLOCK printRoot; root.join('');            END ~%]
-[%~ BLOCK popRoot;   dummy = root.pop();       END ~%]
-
-[%~ BLOCK pushScope;  scope.push('::' _ what); END ~%]
-[%~ BLOCK printScope; scope.join('');          END ~%]
-[%~ BLOCK popScope;   dummy = scope.pop();     END ~%]
-
-[%~ BLOCK FQDN; INCLUDE printRoot; INCLUDE printScope; root.size == 0 ? what : '::' _ what;  END ~%]
-[%~ BLOCK xxxExpr; ~%]
-  [%~ rhs = as_list(item) ~%]
-  [%~ IF rhs.max == 2 ~%]
-    [%~ INCLUDE ast2perl item=rhs.0 %]
-    [%~ INCLUDE getLexeme item=rhs.1 ~%]
-    [%~ INCLUDE ast2perl item=rhs.2 %]
-  [%~ ELSE ~%]
-    [%~ INCLUDE ast2perl item=rhs.0 %]
-  [%~ END ~%]
+[%~ BLOCK withSetup ~%]
+[% INCLUDE printFirstRoot ~%][%~ '::_Types' %]
 [%~ END ~%]
+
 
 [%~ BLOCK ast2perl ~%]
   [% indent = newindent || indent ~%]
@@ -110,15 +123,14 @@
       [%~ CASE 'IDL::AST::module' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
-        [%~ identifier = INCLUDE getLexeme item=rhs.1 | trim ~%]
+        [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
+        [%~ INCLUDE pushRoot what=identifier ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]package [% INCLUDE FQDN what=identifier  %] {
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-[%~ INCLUDE pushRoot what=identifier ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent+2) %]use Moose::Role;
+[% sp(indent) %][% INCLUDE printSetup  %]
+
+[% sp(indent) %]package [% INCLUDE printFirstRoot  %] {
+[% sp(indent+2) %]use Moose;
 [% sp(indent+2) %]use Moose::Util::TypeConstraints;
-[% sp(indent+2) %]use MooseX::Interface;
 [% sp(indent+2) %]use MooseX::ClassAttribute;
 [% sp(indent+2) %]with 'dom::_Types';
 
@@ -131,8 +143,10 @@
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::forwardDcl' ~%]
       [%~################################################ ~%]
+        [%~# Useless (fortunately -;) with MooseX::Declare ~%]
+        [%~ RETURN ~%]
         [%~ rhs = as_list(item) ~%]
-        [%~ identifier = INCLUDE getLexeme item=rhs.2 | trim ~%]
+        [%~ identifier = INCLUDE printLexeme item=rhs.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]with '[% INCLUDE FQDN what=identifier %]';
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -142,7 +156,7 @@
       [%~ CASE 'IDL::AST::exceptDcl' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
-        [%~ identifier = INCLUDE getLexeme item=rhs.1 | trim ~%]
+        [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
         [%~ memberAny = rhs.3 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% nl %]
@@ -150,12 +164,10 @@
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 [%~ INCLUDE pushScope what=identifier ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent+2) %]use Moose::Role;
+[% sp(indent+2) %]use Moose;
 [% sp(indent+2) %]use Moose::Util::TypeConstraints;
-[% sp(indent+2) %]use MooseX::Interface;
 [% sp(indent+2) %]use MooseX::ClassAttribute;
-[% sp(indent+2) %]with 'dom::_Types';
-[% sp(indent+2) %]with 'Throwable';
+[% sp(indent+2) %]with ('dom::_Types', 'Throwable');
 
 [% sp(indent+2) %][% INCLUDE ast2perl memberCtx='attribute' item=memberAny newindent=indent+2 | trim %]
 [% sp(indent) %]};
@@ -206,7 +218,7 @@
       [%~ CASE 'IDL::AST::interfaceHeader' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
-        [%~ identifier = INCLUDE getLexeme item=rhs.2 | trim ~%]
+        [%~ identifier = INCLUDE printLexeme item=rhs.2 | trim ~%]
         [%~ interfaceInheritanceSpecMaybe = rhs.3 ~%]
         [%~# We would like the with () on the same line, so it is done explicitely here ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
@@ -216,9 +228,9 @@
 [% sp(indent+2) %]use Moose::Util::TypeConstraints;
 [% sp(indent+2) %]use MooseX::Interface;
 [% sp(indent+2) %]use MooseX::ClassAttribute;
-[% sp(indent+2) %]with 'dom::_Types';
-[% INCLUDE ast2perl item=interfaceInheritanceSpecMaybe newindent=indent+2 %]
-[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+
+[%~ tmpScope = INCLUDE FQDN what=identifier; INCLUDE ast2perl item=interfaceInheritanceSpecMaybe newindent=indent+2; ~%]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
       [% INCLUDE pushScope what=identifier %]
       [%~ RETURN ~%]
 
@@ -230,35 +242,57 @@
         [%~ interfaceBody = rhs.2 ~%]
         [%~# interfaceHeader is opening/pushing the scope, increase indent ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-
 [% INCLUDE ast2perl item=interfaceHeader %]
 [% INCLUDE ast2perl item=interfaceBody newindent=indent+2 %]
-[% sp(indent) %]};
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
+        [%~ IF identifierListHash.$tmpScope.max == 0 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent+2) %]with [% identifierListHash.$tmpScope.0 ~%];
+[% sp(indent) %]};
+[% nl %]
+[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<%]
+        [%~ ELSE ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent+2) %]with ([%~ identifierListHash.$tmpScope.join(', ') ~%]);
+[% sp(indent) %]};
+[% nl %]
+[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<%]
+        [%~ END ~%]
+        [%~ identifierListHash.$tmpScope = [] ~%]
         [%~ INCLUDE popScope ~%]
         [%~ RETURN ~%]
 
       [%~################################################ ~%]
+      [%~ CASE 'IDL::AST::interfaceInheritanceSpecMaybe' ~%]
+      [%~################################################ ~%]
+        [%~ IF as_list(item).size == 0 ~%]
+          [%~ internalWithSetup = INCLUDE withSetup ~%]
+          [%~ identifierListHash.$tmpScope = [] ~%]
+          [%~ identifierListHash.$tmpScope.push("'" _ internalWithSetup _ "'") ~%]
+        [%~ END ~%]
+
+      [%~################################################ ~%]
       [%~ CASE 'IDL::AST::interfaceNameListMany' ~%]
       [%~################################################ ~%]
+        [%~# We systematically add withSetup ~%]
+        [%~ internalWithSetup = INCLUDE withSetup ~%]
+        [%~ identifierListHash.$tmpScope = [] ~%]
+        [%~ identifierListHash.$tmpScope.push("'" _ internalWithSetup _ "'") ~%]
         [%~ FOREACH interfaceName IN as_list(item) ~%]
           [%~ scopedName = as_list(interfaceName) ~%]
           [%~# C.f. AST/Value.pm, where concatenation of scopedName is already done, so that scopedName looks like a lexeme ~%]
           [%~# If scopedName begins with '::', this is an absolute scope, otherwise a relative scope ~%]
-          [%~ identifier = INCLUDE getLexeme item=scopedName; ~%]
-[%~#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[%~ loop.index() > 0 ? ', ' : ''; ~%]
-[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+          [%~ identifier = INCLUDE printLexeme item=scopedName; ~%]
           [%~ IF identifier.match('^::') ~%]
-[%~#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]with '[%~ identifier ~%]';
-[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+            [%~ identifier = "'" _ identifier _ "'" ~%]
           [%~ ELSE ~%]
-[%~#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]with '[%~ INCLUDE FQDN what=identifier ~%]';
-[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+            [%~ fqdn = INCLUDE FQDN what=identifier ~%]
+            [%~ identifier = "'" _ fqdn _ "'" ~%]
           [%~ END ~%]
+          [%~ dummy = identifierListHash.$tmpScope.push(identifier) ~%]
         [%~ END ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::declaratorListMany' ~%]
@@ -496,7 +530,7 @@
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ constType = INCLUDE ast2perl item=rhs.1 | trim ~%]
-        [%~ identifier = INCLUDE getLexeme item=rhs.2 | trim ~%]
+        [%~ identifier = INCLUDE printLexeme item=rhs.2 | trim ~%]
         [%~ constExp = INCLUDE ast2perl item=rhs.4 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]class_has '[%~ identifier ~%]' => (is => 'ro', isa => [% constType %], default => do {[% constExp ~%]});
@@ -507,7 +541,7 @@
       [%~ CASE 'IDL::AST::unaryOperator' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %][% INCLUDE getLexeme item=rhs.0 | trim %]
+[% sp(indent) %][% INCLUDE printLexeme item=rhs.0 | trim %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 
       [%~################################################ ~%]
@@ -535,7 +569,7 @@
       [%~ CASE 'IDL::AST::identifier' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %][% INCLUDE getLexeme %]
+[% sp(indent) %][% INCLUDE printLexeme %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
           [%~ RETURN ~%]
 
@@ -543,7 +577,7 @@
       [%~ CASE 'IDL::AST::integerLiteral' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %][% INCLUDE getLexeme %]
+[% sp(indent) %][% INCLUDE printLexeme %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
           [%~ RETURN ~%]
 
@@ -551,7 +585,7 @@
       [%~ CASE 'IDL::AST::fixedPtLiteral' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %][% INCLUDE getLexeme %]
+[% sp(indent) %][% INCLUDE printLexeme %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
           [%~ RETURN ~%]
 
@@ -559,7 +593,7 @@
       [%~ CASE 'IDL::AST::floatingPtLiteral' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %][% INCLUDE getLexeme %]
+[% sp(indent) %][% INCLUDE printLexeme %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
           [%~ RETURN ~%]
 
@@ -567,7 +601,7 @@
       [%~ CASE 'IDL::AST::stringLiteral' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]"[% INCLUDE getLexeme %]"
+[% sp(indent) %]"[% INCLUDE printLexeme %]"
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
           [%~ RETURN ~%]
 
@@ -575,7 +609,7 @@
       [%~ CASE 'IDL::AST::wideStringLiteral' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]"[% INCLUDE getLexeme %]"
+[% sp(indent) %]"[% INCLUDE printLexeme %]"
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
           [%~ RETURN ~%]
 
@@ -583,7 +617,7 @@
       [%~ CASE 'IDL::AST::characterLiteral' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]"[% INCLUDE getLexeme %]"
+[% sp(indent) %]"[% INCLUDE printLexeme %]"
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
           [%~ RETURN ~%]
 
@@ -591,7 +625,7 @@
       [%~ CASE 'IDL::AST::booleanLiteral' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
-        [%~ booleanLiteral = INCLUDE getLexeme item=rhs.0 | trim ~%]
+        [%~ booleanLiteral = INCLUDE printLexeme item=rhs.0 | trim ~%]
         [%~ IF booleanLiteral == 'TRUE' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]1
@@ -607,7 +641,7 @@
       [%~ CASE 'IDL::AST::valueBoxDcl' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
-        [%~ identifier = INCLUDE getLexeme item=rhs.1 | trim ~%]
+        [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
         [%~ typeSpec = INCLUDE ast2perl item=rhs.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]subtype '[%~ INCLUDE FQDN what=identifier ~%]', as [% typeSpec %];
@@ -618,7 +652,7 @@
       [%~ CASE 'IDL::AST::structType' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
-        [%~ identifier = INCLUDE getLexeme item=rhs.1 | trim ~%]
+        [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
         [%~ memberList = INCLUDE ast2perl memberCtx='structure' item=rhs.3 newindent=indent+2 | trim %]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]subtype '[%~ INCLUDE FQDN what=identifier ~%]', as '[% memberList %]';
