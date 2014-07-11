@@ -20,18 +20,35 @@
    # "An identifier can only be defined once in a scope. However, identifiers can be redefined in nested scopes. An identifier
    #  declaring a module is considered to be defined by its first occurrence in a scope."
    #
-   # This mean that have to be able to reuse identifiers from outer-scopes. Therefore the use of roles is not very adequate
-   # because we do not want role composition, but really inheritance behaviour.
-   # I.e. interfaces will systematically "extends" the class right upper to inherit everything from it, and use a "has '+identifier" in order
-   # to be able to completely overwrite an attribute.
+   # This mean that have simply keep the enclosed construct of IDL, i.e. role xx { role y { role z { ... }}}
    #
-   # The only role that we will use is the generic inclusion of our type library
-   #
-   # But:
+   # And:
    #
    # "An identifier from a surrounding scope is introduced into a scope if it is used in that scope. An identifier is not introduced
    #  into a scope by merely being visible in that scope. The use of a scoped name introduces the identifier of the outermost
    #  scope of the scoped name."
+   #
+   # This is perfectly compatible with role composition of Mosee, e.g.:
+   #
+   #
+   # Also:
+   #
+   # "A qualified name of the form ::X::Y::Z does not cause X to be introduced, but a qualified name of the form X::Y::Z does."
+   #
+   #  role dom::test {
+   #    use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
+   #    has 'intest' => (is => 'rw', isa => PositiveOrZeroInt, default => 3);
+   #  };
+   #
+   #  role dom::DOMException {
+   #    use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
+   #    has 'code' => (is => 'rw', isa => PositiveOrZeroInt, default => 2);
+   #    has 'intest' => (is => 'rw', isa => PositiveOrZeroInt, default => 4);
+   #    with ('dom::test');
+   #  };
+   #
+   # is illegal.
+   #
    #
    # So we left to delegation or explicitely remove accessors.
    #
@@ -39,6 +56,8 @@
 
 ~%]
 #!env perl
+
+use MooseX::Declare;
 
 [% # The whole IDL file is describing what is "Role" in Moose terminology
    # Instead of requiring the ScalarUtil, Dumper etc... plugin, the following methods are explicitely provided by the caller:
@@ -52,7 +71,14 @@
    # so they are explicitely setted
    #
 ~%]
-[% PROCESS ast2perl item=ast indent=0 root=[] scope=[] identifierListHash={} %]
+[% PROCESS ast2perl item=ast
+                    indent=0
+                    root=[]
+                    scope=[]
+                    scopeWithHash={}
+                    classHasHash={}
+                    scopeSubtypeDeclHash={}
+                    bodyHash={} %]
 [% nl %]
 [%~ RETURN ~%]
 
@@ -77,7 +103,7 @@
 [%~ BLOCK printLastScope;  scope.reverse.0;    END ~%]
 
 [%~ BLOCK FQDN; INCLUDE printRoot; INCLUDE printScope; what ? (root.size == 0 ? what : '::' _ what) : '';  END ~%]
-[%~ BLOCK xxxExpr; ~%]
+[%~ BLOCK xxxExpr ~%]
   [%~ rhs = as_list(item) ~%]
   [%~ IF rhs.max == 2 ~%]
     [%~ INCLUDE ast2perl item=rhs.0 %]
@@ -88,30 +114,48 @@
   [%~ END ~%]
 [%~ END ~%]
 
-[%~ BLOCK printSetup ~%]
-[% 'package ' ~%][%~ INCLUDE withSetup ~%][%~ ' {
-  use Moose::Role;
-  use Moose::Util::TypeConstraints;
-
-  # (c) MooseX::Types::Common::Numeric
-  subtype \'dom::_PositiveOrZeroInt\',
-    as \'Int\',
-      where { $_ >= 0 },
-        message { "Must be an integer greater than or equal to zero" },
-          ( $Moose::VERSION >= 2.0200
-            ? inline_as {
-              $_[0]->parent()->_inline_check( $_[1] ) . \' && \'
-                . qq{ ($_[1] >= 0) };
-            }
-            : ()
-          );
-};' %]
+[%~ BLOCK printWith ~%]
+  [%~ tmpScope = INCLUDE FQDN what='' ~%]
+  [%~ IF scopeWithHash.$tmpScope.size == 1 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(withIndent) %]with [% scopeWithHash.$tmpScope.0 ~%];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ ELSIF scopeWithHash.$tmpScope.size > 0 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(withIndent) %]with ([%~ scopeWithHash.$tmpScope.join(', ') ~%]);
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ scopeWithHash.$tmpScope = [] ~%]
 [%~ END ~%]
 
-[%~ BLOCK withSetup ~%]
-[% INCLUDE printFirstRoot ~%][%~ '::_Types' %]
+[%~ BLOCK printSubtypeDecl ~%]
+  [%~ tmpScope = INCLUDE FQDN what='' ~%]
+  [%~ IF scopeSubtypeDeclHash.$tmpScope.keys.size > 0 ~%]
+    [%~ IF scopeSubtypeDeclHash.$tmpScope.exists('PositiveOrZeroInt') ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(subTypeIndent) %]use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+    [%~ scopeSubtypeDeclHash.$tmpScope.delete('PositiveOrZeroInt') ~%]
+    [%~ END ~%]
+    [%~ IF scopeSubtypeDeclHash.$tmpScope.keys.size > 0 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(subTypeIndent) %]use MooseX::Types::Moose -all;
+[% sp(subTypeIndent) %]use MooseX::Types -declare => [qw/[%~ scopeSubtypeDeclHash.$tmpScope.keys.join(' ') ~%]/];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+    [%~ END ~%]
+  [%~ END ~%]
+  [%~ scopeSubtypeDeclHash.$tmpScope = {} ~%]
 [%~ END ~%]
 
+[%~ BLOCK printClassHas ~%]
+  [%~ tmpScope = INCLUDE FQDN what='' ~%]
+  [%~ IF classHasHash.$tmpScope  ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(classHasIndent) %]use MooseX::ClassAttribute;
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ classHasHash.$tmpScope = 0 ~%]
+[%~ END ~%]
 
 [%~ BLOCK ast2perl ~%]
   [% indent = newindent || indent ~%]
@@ -125,17 +169,20 @@
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
         [%~ INCLUDE pushRoot what=identifier ~%]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
+        [%~ scopeWithHash.$tmpScope = [] ~%]
+        [%~ classHasHash.$tmpScope = 0 ~%]
+        [%~ scopeSubtypeDeclHash.$tmpScope = {} ~%]
+        [%~ bodyHash.$tmpScope = INCLUDE ast2perl item=as_list(item).3 newindent=indent+2 | trim ~%]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %][% INCLUDE printSetup  %]
-
-[% sp(indent) %]package [% INCLUDE printFirstRoot  %] {
-[% sp(indent+2) %]use Moose;
-[% sp(indent+2) %]use Moose::Util::TypeConstraints;
-[% sp(indent+2) %]use MooseX::ClassAttribute;
-[% sp(indent+2) %]with 'dom::_Types';
-
-[% sp(indent+2) %][% INCLUDE ast2perl item=as_list(item).3 newindent=indent+2 | trim %]
+[% sp(indent) %]role [% INCLUDE printFirstRoot  %] {
+[% INCLUDE printClassHas classHasIndent=indent+2;
+   INCLUDE printSubtypeDecl subTypeIndent=indent+2 %]
+[% sp(indent+2) %][% bodyHash.$tmpScope %]
+[% INCLUDE printWith withIndent=indent+2 %]
 [% sp(indent) %]};
+[% nl %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE popRoot ~%]
         [%~ RETURN ~%]
@@ -143,13 +190,15 @@
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::forwardDcl' ~%]
       [%~################################################ ~%]
-        [%~# Useless (fortunately -;) with MooseX::Declare ~%]
-        [%~ RETURN ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.2 | trim ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]with '[% INCLUDE FQDN what=identifier %]';
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
+        [%~ IF identifier.match('^::') ~%]
+          [%~ identifier = "'" _ identifier _ "'" ~%]
+        [%~ ELSE ~%]
+          [%~ identifier = INCLUDE FQDN what=identifier ~%]
+        [%~ END ~%]
+        [%~ scopeWithHash.$tmpScope.unshift('\'' _ identifier _ '\'') ~%]
         [%~ RETURN ~%]
 
       [%~################################################ ~%]
@@ -160,16 +209,21 @@
         [%~ memberAny = rhs.3 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% nl %]
-[% sp(indent) %]package [% INCLUDE FQDN what=identifier %] {
+[% sp(indent) %]role [% INCLUDE FQDN what=identifier %] {
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-[%~ INCLUDE pushScope what=identifier ~%]
+        [%~ previousTmpScope = INCLUDE FQDN what='' ~%]
+        [%~ INCLUDE pushScope what=identifier ~%]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
+        [%~ scopeWithHash.$tmpScope = [] ~%]
+        [%~ classHasHash.$tmpScope = 0 ~%]
+        [%~ scopeSubtypeDeclHash.$tmpScope = {} ~%]
+        [%~ bodyHash.$tmpScope = INCLUDE ast2perl memberCtx='attribute' item=memberAny newindent=indent+2 | trim %]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent+2) %]use Moose;
-[% sp(indent+2) %]use Moose::Util::TypeConstraints;
-[% sp(indent+2) %]use MooseX::ClassAttribute;
-[% sp(indent+2) %]with ('dom::_Types', 'Throwable');
-
-[% sp(indent+2) %][% INCLUDE ast2perl memberCtx='attribute' item=memberAny newindent=indent+2 | trim %]
+[% INCLUDE printClassHas classHasIndent=indent+2;
+   INCLUDE printSubtypeDecl subTypeIndent=indent+2 %]
+[% sp(indent+2) %][% bodyHash.$tmpScope %]
+[% INCLUDE printWith withIndent=indent+2 %]
 [% sp(indent) %]};
 [% nl %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -223,16 +277,17 @@
         [%~# We would like the with () on the same line, so it is done explicitely here ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% nl %]
-[% sp(indent) %]package [% INCLUDE FQDN what=identifier %] {
-[% sp(indent+2) %]use Moose::Role;
-[% sp(indent+2) %]use Moose::Util::TypeConstraints;
+[% sp(indent) %]role [% INCLUDE FQDN what=identifier %] {
 [% sp(indent+2) %]use MooseX::Interface;
-[% sp(indent+2) %]use MooseX::ClassAttribute;
-
-[%~ tmpScope = INCLUDE FQDN what=identifier; INCLUDE ast2perl item=interfaceInheritanceSpecMaybe newindent=indent+2; ~%]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-      [% INCLUDE pushScope what=identifier %]
-      [%~ RETURN ~%]
+        [%~ previousTmpScope = INCLUDE FQDN what='' ~%]
+        [%~ tmpScope = INCLUDE FQDN what=identifier ~%]
+        [%~ scopeWithHash.$tmpScope = [] ~%]
+        [%~ classHasHash.$tmpScope = 0 ~%]
+        [%~ scopeSubtypeDeclHash.$tmpScope = {} ~%]
+        [%~ INCLUDE ast2perl tmpScopeForInheritance=tmpScope item=interfaceInheritanceSpecMaybe newindent=indent+2 ~%]
+        [% INCLUDE pushScope what=identifier %]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::interfaceDcl' ~%]
@@ -243,54 +298,34 @@
         [%~# interfaceHeader is opening/pushing the scope, increase indent ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% INCLUDE ast2perl item=interfaceHeader %]
-[% INCLUDE ast2perl item=interfaceBody newindent=indent+2 %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ tmpScope = INCLUDE FQDN what='' ~%]
-        [%~ IF identifierListHash.$tmpScope.max == 0 ~%]
+        [%~ # JDD bodyHash.$tmpScope = INCLUDE ast2perl item=interfaceBody newindent=indent+2 %]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent+2) %]with [% identifierListHash.$tmpScope.0 ~%];
+[% INCLUDE printClassHas classHasIndent=indent+2;
+   INCLUDE printSubtypeDecl subTypeIndent=indent+2 %]
+[% sp(indent+2) %][% bodyHash.$tmpScope %]
+[% INCLUDE printWith withIndent=indent+2 %]
 [% sp(indent) %]};
-[% nl %]
-[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<%]
-        [%~ ELSE ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent+2) %]with ([%~ identifierListHash.$tmpScope.join(', ') ~%]);
-[% sp(indent) %]};
-[% nl %]
-[%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<%]
-        [%~ END ~%]
-        [%~ identifierListHash.$tmpScope = [] ~%]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE popScope ~%]
         [%~ RETURN ~%]
 
       [%~################################################ ~%]
-      [%~ CASE 'IDL::AST::interfaceInheritanceSpecMaybe' ~%]
-      [%~################################################ ~%]
-        [%~ IF as_list(item).size == 0 ~%]
-          [%~ internalWithSetup = INCLUDE withSetup ~%]
-          [%~ identifierListHash.$tmpScope = [] ~%]
-          [%~ identifierListHash.$tmpScope.push("'" _ internalWithSetup _ "'") ~%]
-        [%~ END ~%]
-
-      [%~################################################ ~%]
       [%~ CASE 'IDL::AST::interfaceNameListMany' ~%]
       [%~################################################ ~%]
-        [%~# We systematically add withSetup ~%]
-        [%~ internalWithSetup = INCLUDE withSetup ~%]
-        [%~ identifierListHash.$tmpScope = [] ~%]
-        [%~ identifierListHash.$tmpScope.push("'" _ internalWithSetup _ "'") ~%]
         [%~ FOREACH interfaceName IN as_list(item) ~%]
           [%~ scopedName = as_list(interfaceName) ~%]
           [%~# C.f. AST/Value.pm, where concatenation of scopedName is already done, so that scopedName looks like a lexeme ~%]
           [%~# If scopedName begins with '::', this is an absolute scope, otherwise a relative scope ~%]
-          [%~ identifier = INCLUDE printLexeme item=scopedName; ~%]
+          [%~ identifier = INCLUDE printLexeme item=scopedName ~%]
           [%~ IF identifier.match('^::') ~%]
             [%~ identifier = "'" _ identifier _ "'" ~%]
           [%~ ELSE ~%]
-            [%~ fqdn = INCLUDE FQDN what=identifier ~%]
-            [%~ identifier = "'" _ fqdn _ "'" ~%]
+            [%~ identifier = INCLUDE FQDN what=identifier ~%]
           [%~ END ~%]
-          [%~ dummy = identifierListHash.$tmpScope.push(identifier) ~%]
+          [%~ dummy = scopeWithHash.$tmpScopeForInheritance.unshift('\'' _ identifier _ '\'') ~%]
         [%~ END ~%]
         [%~ RETURN ~%]
 
@@ -300,7 +335,7 @@
         [%~ FOREACH rhs IN as_list(item) ~%]
           [%~ declarator = INCLUDE ast2perl item=rhs | trim ~%]
 [%~#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[%~ loop.index() > 0 ? ', ' : ''; ~%]
+[%~ loop.index() > 0 ? ', ' : '' ~%]
 [%~ declarator ~%]
 [%~#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ END ~%]
@@ -332,7 +367,7 @@
           [%~ positiveIntConst = -1 ~%]
         [%~ END ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'ArrayRef[[%~ INCLUDE ast2perl item=simpleTypeSpec | trim | replace("'", "") ~%]]'
+[% sp(indent) %]ArrayRef[[%~ INCLUDE ast2perl item=simpleTypeSpec | trim | replace("'", "") ~%]]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ IF positiveIntConst >= 0 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
@@ -351,7 +386,7 @@
           [%~ positiveIntConst = -1 ~%]
         [%~ END ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'Str'
+[% sp(indent) %]Str
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ IF positiveIntConst >= 0 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
@@ -378,7 +413,7 @@
           [%~ positiveIntConst = -1 ~%]
         [%~ END ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'Str'
+[% sp(indent) %]Str
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ IF positiveIntConst >= 0 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
@@ -399,7 +434,7 @@
       [%~ CASE 'IDL::AST::floatingPtType' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'Num'
+[% sp(indent) %]Num
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~# No need to go further ~%]
         [%~ RETURN ~%]
@@ -408,7 +443,7 @@
       [%~ CASE 'IDL::AST::signedInt' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'Int'
+[% sp(indent) %]Int
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~# No need to go further ~%]
         [%~ RETURN ~%]
@@ -416,8 +451,10 @@
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::unsignedInt' ~%]
       [%~################################################ ~%]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
+        [%~ scopeSubtypeDeclHash.$tmpScope.PositiveOrZeroInt = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'dom::_PositiveOrZeroInt'
+[% sp(indent) %]PositiveOrZeroInt
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~# No need to go further ~%]
         [%~ RETURN ~%]
@@ -427,7 +464,7 @@
       [%~# Note: octetType is binary data ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'Defined'
+[% sp(indent) %]Defined
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~# No need to go further ~%]
         [%~ RETURN ~%]
@@ -436,7 +473,7 @@
       [%~ CASE 'IDL::AST::anyType' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'Any'
+[% sp(indent) %]Any
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~# No need to go further ~%]
         [%~ RETURN ~%]
@@ -445,7 +482,7 @@
       [%~ CASE 'IDL::AST::objectType' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'Object'
+[% sp(indent) %]Object
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~# No need to go further ~%]
         [%~ RETURN ~%]
@@ -454,7 +491,7 @@
       [%~ CASE 'IDL::AST::charType' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'Str'
+[% sp(indent) %]Str
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~# No need to go further ~%]
         [%~ RETURN ~%]
@@ -463,7 +500,7 @@
       [%~ CASE 'IDL::AST::wideCharType' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'Str'
+[% sp(indent) %]Str
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~# No need to go further ~%]
         [%~ RETURN ~%]
@@ -472,7 +509,7 @@
       [%~ CASE 'IDL::AST::booleanType' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'Bool'
+[% sp(indent) %]Bool
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~# No need to go further ~%]
         [%~ RETURN ~%]
@@ -532,8 +569,10 @@
         [%~ constType = INCLUDE ast2perl item=rhs.1 | trim ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.2 | trim ~%]
         [%~ constExp = INCLUDE ast2perl item=rhs.4 | trim ~%]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
+        [%~ classHasHash.$tmpScope = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]class_has '[%~ identifier ~%]' => (is => 'ro', isa => [% constType %], default => do {[% constExp ~%]});
+[% sp(indent) %]class_has [% identifier %] => (is => 'ro', isa => [% constType %], default => do {[% constExp ~%]});
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ RETURN ~%]
 
@@ -643,8 +682,10 @@
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
         [%~ typeSpec = INCLUDE ast2perl item=rhs.2 | trim ~%]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
+        [%~ scopeSubtypeDeclHash.$tmpScope.$identifier = typeSpec ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]subtype '[%~ INCLUDE FQDN what=identifier ~%]', as [% typeSpec %];
+[% sp(indent) %]subtype [% identifier %], as [% typeSpec %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ RETURN ~%]
 
@@ -654,8 +695,10 @@
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
         [%~ memberList = INCLUDE ast2perl memberCtx='structure' item=rhs.3 newindent=indent+2 | trim %]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
+        [%~ scopeSubtypeDeclHash.$tmpScope.$identifier = memberList ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]subtype '[%~ INCLUDE FQDN what=identifier ~%]', as '[% memberList %]';
+[% sp(indent) %]subtype [% identifier %], as '[% memberList %]';
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ RETURN ~%]
 
@@ -665,10 +708,12 @@
         [%~ rhs = as_list(item) ~%]
         [%~ typeSpec = INCLUDE ast2perl item=rhs.0 | trim ~%]
         [%~ declarators = INCLUDE ast2perl item=rhs.1 | trim ~%]
-        [%~# We are lucky that only this rule correspond to typedef -; ~%]
+        [%~# We are lucky that only this rule correspond to typedef - ~%]
         [%~ FOREACH declarator IN declarators.split(', ') ~%]
+        [%~ tmpScope = INCLUDE FQDN what='' ~%]
+        [%~ scopeSubtypeDeclHash.$tmpScope.$declarator = typeSpec ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% loop.index() > 0 ? nl : '' %][% sp(indent) %]subtype '[%~ INCLUDE FQDN what=declarator %]', as [% typeSpec %];
+[% loop.index() > 0 ? nl : '' %][% sp(indent) %]subtype [% declarator %], as [% typeSpec %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ END ~%]
         [%~ RETURN ~%]
