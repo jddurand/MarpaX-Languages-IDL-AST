@@ -75,9 +75,11 @@ use MooseX::Declare;
                     indent=0
                     root=[]
                     scope=[]
-                    scopeWithHash={}
-                    classHasHash={}
-                    scopeSubtypeDeclHash={}
+                    withHash={}
+                    useHash={}
+                    extendsHash={}
+                    class_hasHash={}
+                    subtypesHash={}
                     bodyHash={} %]
 [% nl %]
 [%~ RETURN ~%]
@@ -102,7 +104,7 @@ use MooseX::Declare;
 [%~ BLOCK popScope;   dummy = scope.pop();     END ~%]
 [%~ BLOCK printLastScope;  scope.reverse.0;    END ~%]
 
-[%~ BLOCK FQDN; INCLUDE printRoot; INCLUDE printScope; what ? (root.size == 0 ? what : '::' _ what) : '';  END ~%]
+[%~ BLOCK SFQN; INCLUDE printRoot; INCLUDE printScope; what ? (root.size == 0 ? what : '::' _ what) : '';  END ~%]
 [%~ BLOCK xxxExpr ~%]
   [%~ rhs = as_list(item) ~%]
   [%~ IF rhs.max == 2 ~%]
@@ -115,47 +117,84 @@ use MooseX::Declare;
 [%~ END ~%]
 
 [%~ BLOCK printWith ~%]
-  [%~ tmpScope = INCLUDE FQDN what='' ~%]
-  [%~ IF scopeWithHash.$tmpScope.size == 1 ~%]
+  [%~ IF withHash.$blockName.size == 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(withIndent) %]with [% scopeWithHash.$tmpScope.0 ~%];
+[% sp(withIndent) %]with [% withHash.$blockName.0 ~%];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-  [%~ ELSIF scopeWithHash.$tmpScope.size > 0 ~%]
+  [%~ ELSIF withHash.$blockName.size > 0 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(withIndent) %]with ([%~ scopeWithHash.$tmpScope.join(', ') ~%]);
+[% sp(withIndent) %]with ([%~ withHash.$blockName.join(', ') ~%]);
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
-  [%~ scopeWithHash.$tmpScope = [] ~%]
 [%~ END ~%]
 
-[%~ BLOCK printSubtypeDecl ~%]
-  [%~ tmpScope = INCLUDE FQDN what='' ~%]
-  [%~ IF scopeSubtypeDeclHash.$tmpScope.keys.size > 0 ~%]
-    [%~ IF scopeSubtypeDeclHash.$tmpScope.exists('PositiveOrZeroInt') ~%]
+[%~ BLOCK printUse ~%]
+  [%~ FOREACH use IN useHash.$blockName.keys ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(subTypeIndent) %]use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
+[% sp(useIndent) %]use [% use ~%];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-    [%~ scopeSubtypeDeclHash.$tmpScope.delete('PositiveOrZeroInt') ~%]
-    [%~ END ~%]
-    [%~ IF scopeSubtypeDeclHash.$tmpScope.keys.size > 0 ~%]
+  [%~ END ~%]
+[%~ END ~%]
+
+[%~ BLOCK printExtends ~%]
+  [%~ IF extendsHash.$blockName.size == 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(subTypeIndent) %]use MooseX::Types::Moose -all;
-[% sp(subTypeIndent) %]use MooseX::Types -declare => [qw/[%~ scopeSubtypeDeclHash.$tmpScope.keys.join(' ') ~%]/];
+[% sp(extendsIndent) %]extends [% extendsHash.$blockName.0 ~%];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ ELSIF extendsHash.$blockName.size > 0 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(extendsIndent) %]extends ([%~ extendsHash.$blockName.join(', ') ~%]);
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+[%~ END ~%]
+
+[%~ BLOCK printSubtypes ~%]
+  [%~ IF subtypesHash.$blockName.keys.size > 0 ~%]
+    [%~ IF subtypesHash.$blockName.exists('PositiveOrZeroInt') ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(subtypesIndent) %]use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+    [%~ subtypesHash.$blockName.delete('PositiveOrZeroInt') ~%]
+    [%~ END ~%]
+    [%~ IF subtypesHash.$blockName.keys.size > 0 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(subtypesIndent) %]use MooseX::Types::Moose -all;
+[% sp(subtypesIndent) %]use MooseX::Types -declare => [qw/[%~ subtypesHash.$blockName.keys.join(' ') ~%]/];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
     [%~ END ~%]
   [%~ END ~%]
-  [%~ scopeSubtypeDeclHash.$tmpScope = {} ~%]
 [%~ END ~%]
 
 [%~ BLOCK printClassHas ~%]
-  [%~ tmpScope = INCLUDE FQDN what='' ~%]
-  [%~ IF classHasHash.$tmpScope  ~%]
+  [%~ IF class_hasHash.$blockName  ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(classHasIndent) %]use MooseX::ClassAttribute;
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
-  [%~ classHasHash.$tmpScope = 0 ~%]
 [%~ END ~%]
+
+[%~ BLOCK initBlock ~%]
+  [%~ useHash.$blockName = {} ~%]
+  [%~ class_hasHash.$blockName = 0 ~%]
+  [%~ subtypesHash.$blockName = {} ~%]
+  [%~ withHash.$blockName = [] ~%]
+  [%~ extendsHash.$blockName = [] ~%]
+[%~ END ~%]
+
+[%~ BLOCK printBlock ~%]
+  [%~ blockName = INCLUDE SFQN what='' ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(blockIndent); blockType _ ' ' _ blockName %] {
+[% INCLUDE printUse useIndent=blockIndent+2 %]
+[% INCLUDE printClassHas classHasIndent=blockIndent+2 %]
+[% INCLUDE printSubtypes subtypesIndent=blockIndent+2 %]
+[% sp(blockIndent+2); bodyHash.$blockName %]
+[% INCLUDE printWith withIndent=blockIndent+2 %]
+[% INCLUDE printExtends extendsIndent=blockIndent+2 %]
+[% sp(blockIndent) %]};
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+[%~ END ~%]
+
 
 [%~ BLOCK ast2perl ~%]
   [% indent = newindent || indent ~%]
@@ -168,21 +207,13 @@ use MooseX::Declare;
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
+
         [%~ INCLUDE pushRoot what=identifier ~%]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
-        [%~ scopeWithHash.$tmpScope = [] ~%]
-        [%~ classHasHash.$tmpScope = 0 ~%]
-        [%~ scopeSubtypeDeclHash.$tmpScope = {} ~%]
+        [%~ tmpScope = INCLUDE SFQN what='' ~%]
+        [%~ INCLUDE initBlock blockName=tmpScope ~%]
         [%~ bodyHash.$tmpScope = INCLUDE ast2perl item=as_list(item).3 newindent=indent+2 | trim ~%]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]role [% INCLUDE printFirstRoot  %] {
-[% INCLUDE printClassHas classHasIndent=indent+2;
-   INCLUDE printSubtypeDecl subTypeIndent=indent+2 %]
-[% sp(indent+2) %][% bodyHash.$tmpScope %]
-[% INCLUDE printWith withIndent=indent+2 %]
-[% sp(indent) %]};
-[% nl %]
+[% INCLUDE printBlock blockIndent=indent blockType='class' %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE popRoot ~%]
         [%~ RETURN ~%]
@@ -192,13 +223,14 @@ use MooseX::Declare;
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.2 | trim ~%]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
+
+        [%~ tmpScope = INCLUDE SFQN what='' ~%]
         [%~ IF identifier.match('^::') ~%]
           [%~ identifier = "'" _ identifier _ "'" ~%]
         [%~ ELSE ~%]
-          [%~ identifier = INCLUDE FQDN what=identifier ~%]
+          [%~ identifier = INCLUDE SFQN what=identifier ~%]
         [%~ END ~%]
-        [%~ scopeWithHash.$tmpScope.unshift('\'' _ identifier _ '\'') ~%]
+        [%~ withHash.$tmpScope.unshift('\'' _ identifier _ '\'') ~%]
         [%~ RETURN ~%]
 
       [%~################################################ ~%]
@@ -207,25 +239,14 @@ use MooseX::Declare;
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
         [%~ memberAny = rhs.3 ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% nl %]
-[% sp(indent) %]role [% INCLUDE FQDN what=identifier %] {
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-        [%~ previousTmpScope = INCLUDE FQDN what='' ~%]
+
         [%~ INCLUDE pushScope what=identifier ~%]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
-        [%~ scopeWithHash.$tmpScope = [] ~%]
-        [%~ classHasHash.$tmpScope = 0 ~%]
-        [%~ scopeSubtypeDeclHash.$tmpScope = {} ~%]
+        [%~ tmpScope = INCLUDE SFQN what='' ~%]
+        [%~ INCLUDE initBlock blockName=tmpScope ~%]
+        [%~ extendsHash.$tmpScope.push('\'Throwable::Error\'') ~%]
         [%~ bodyHash.$tmpScope = INCLUDE ast2perl memberCtx='attribute' item=memberAny newindent=indent+2 | trim %]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% INCLUDE printClassHas classHasIndent=indent+2;
-   INCLUDE printSubtypeDecl subTypeIndent=indent+2 %]
-[% sp(indent+2) %][% bodyHash.$tmpScope %]
-[% INCLUDE printWith withIndent=indent+2 %]
-[% sp(indent) %]};
-[% nl %]
+[% INCLUDE printBlock blockIndent=indent blockType='class' %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE popScope ~%]
         [%~ RETURN ~%]
@@ -234,6 +255,7 @@ use MooseX::Declare;
       [%~ CASE 'IDL::AST::memberList' ~%]
       [%~################################################ ~%]
         [%~ rhs = as_list(item) ~%]
+
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]Dict[
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -253,6 +275,7 @@ use MooseX::Declare;
         [%~ rhs = as_list(item) ~%]
         [%~ typeSpec = INCLUDE ast2perl item=rhs.0 |trim ~%]
         [%~ declarators = INCLUDE ast2perl item=rhs.1 |trim ~%]
+
         [%~ IF memberCtx == 'attribute' ~%]
           [%~ FOREACH declarator IN declarators.split(', ') ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
@@ -274,19 +297,14 @@ use MooseX::Declare;
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.2 | trim ~%]
         [%~ interfaceInheritanceSpecMaybe = rhs.3 ~%]
-        [%~# We would like the with () on the same line, so it is done explicitely here ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% nl %]
-[% sp(indent) %]role [% INCLUDE FQDN what=identifier %] {
-[% sp(indent+2) %]use MooseX::Interface;
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-        [%~ previousTmpScope = INCLUDE FQDN what='' ~%]
-        [%~ tmpScope = INCLUDE FQDN what=identifier ~%]
-        [%~ scopeWithHash.$tmpScope = [] ~%]
-        [%~ classHasHash.$tmpScope = 0 ~%]
-        [%~ scopeSubtypeDeclHash.$tmpScope = {} ~%]
+
+        [%~ tmpScope = INCLUDE SFQN what=identifier ~%]
+        [%~ INCLUDE initBlock blockName=tmpScope ~%]
+        [%~ use = 'MooseX::Interface' ~%]
+        [%~ useHash.$tmpScope.$use = 1 ~%]
         [%~ INCLUDE ast2perl tmpScopeForInheritance=tmpScope item=interfaceInheritanceSpecMaybe newindent=indent+2 ~%]
         [% INCLUDE pushScope what=identifier %]
+        [%~# interfaceDcl will close the scope ~%]
         [%~ RETURN ~%]
 
       [%~################################################ ~%]
@@ -295,19 +313,13 @@ use MooseX::Declare;
         [%~ rhs = as_list(item) ~%]
         [%~ interfaceHeader = rhs.0 ~%]
         [%~ interfaceBody = rhs.2 ~%]
-        [%~# interfaceHeader is opening/pushing the scope, increase indent ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% INCLUDE ast2perl item=interfaceHeader %]
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
+
+        [%~ INCLUDE ast2perl item=interfaceHeader ~%]
+        [%~# interfaceHeader has opened the scope ~%]
+        [%~ tmpScope = INCLUDE SFQN what='' ~%]
         [%~ # JDD bodyHash.$tmpScope = INCLUDE ast2perl item=interfaceBody newindent=indent+2 %]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% INCLUDE printClassHas classHasIndent=indent+2;
-   INCLUDE printSubtypeDecl subTypeIndent=indent+2 %]
-[% sp(indent+2) %][% bodyHash.$tmpScope %]
-[% INCLUDE printWith withIndent=indent+2 %]
-[% sp(indent) %]};
+[%~ INCLUDE printBlock blockIndent=indent blockType='role' ~%]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE popScope ~%]
         [%~ RETURN ~%]
@@ -323,9 +335,9 @@ use MooseX::Declare;
           [%~ IF identifier.match('^::') ~%]
             [%~ identifier = "'" _ identifier _ "'" ~%]
           [%~ ELSE ~%]
-            [%~ identifier = INCLUDE FQDN what=identifier ~%]
+            [%~ identifier = INCLUDE SFQN what=identifier ~%]
           [%~ END ~%]
-          [%~ dummy = scopeWithHash.$tmpScopeForInheritance.unshift('\'' _ identifier _ '\'') ~%]
+          [%~ dummy = withHash.$tmpScopeForInheritance.unshift('\'' _ identifier _ '\'') ~%]
         [%~ END ~%]
         [%~ RETURN ~%]
 
@@ -451,8 +463,8 @@ use MooseX::Declare;
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::unsignedInt' ~%]
       [%~################################################ ~%]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
-        [%~ scopeSubtypeDeclHash.$tmpScope.PositiveOrZeroInt = 1 ~%]
+        [%~ tmpScope = INCLUDE SFQN what='' ~%]
+        [%~ subtypesHash.$tmpScope.PositiveOrZeroInt = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]PositiveOrZeroInt
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -569,8 +581,8 @@ use MooseX::Declare;
         [%~ constType = INCLUDE ast2perl item=rhs.1 | trim ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.2 | trim ~%]
         [%~ constExp = INCLUDE ast2perl item=rhs.4 | trim ~%]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
-        [%~ classHasHash.$tmpScope = 1 ~%]
+        [%~ tmpScope = INCLUDE SFQN what='' ~%]
+        [%~ class_hasHash.$tmpScope = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]class_has [% identifier %] => (is => 'ro', isa => [% constType %], default => do {[% constExp ~%]});
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -600,7 +612,7 @@ use MooseX::Declare;
       [%~ CASE 'IDL::AST::scopedName' ~%]
       [%~################################################ ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'[%~ INCLUDE FQDN what=lexeme(as_list(item)) %]'
+[% sp(indent) %]'[%~ INCLUDE SFQN what=lexeme(as_list(item)) %]'
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
           [%~ RETURN ~%]
 
@@ -682,8 +694,8 @@ use MooseX::Declare;
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
         [%~ typeSpec = INCLUDE ast2perl item=rhs.2 | trim ~%]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
-        [%~ scopeSubtypeDeclHash.$tmpScope.$identifier = typeSpec ~%]
+        [%~ tmpScope = INCLUDE SFQN what='' ~%]
+        [%~ subtypesHash.$tmpScope.$identifier = typeSpec ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]subtype [% identifier %], as [% typeSpec %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -695,8 +707,8 @@ use MooseX::Declare;
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
         [%~ memberList = INCLUDE ast2perl memberCtx='structure' item=rhs.3 newindent=indent+2 | trim %]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
-        [%~ scopeSubtypeDeclHash.$tmpScope.$identifier = memberList ~%]
+        [%~ tmpScope = INCLUDE SFQN what='' ~%]
+        [%~ subtypesHash.$tmpScope.$identifier = memberList ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]subtype [% identifier %], as '[% memberList %]';
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -710,8 +722,8 @@ use MooseX::Declare;
         [%~ declarators = INCLUDE ast2perl item=rhs.1 | trim ~%]
         [%~# We are lucky that only this rule correspond to typedef - ~%]
         [%~ FOREACH declarator IN declarators.split(', ') ~%]
-        [%~ tmpScope = INCLUDE FQDN what='' ~%]
-        [%~ scopeSubtypeDeclHash.$tmpScope.$declarator = typeSpec ~%]
+        [%~ tmpScope = INCLUDE SFQN what='' ~%]
+        [%~ subtypesHash.$tmpScope.$declarator = typeSpec ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% loop.index() > 0 ? nl : '' %][% sp(indent) %]subtype [% declarator %], as [% typeSpec %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
