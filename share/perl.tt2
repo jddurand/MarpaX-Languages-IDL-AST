@@ -28,32 +28,14 @@
    #  into a scope by merely being visible in that scope. The use of a scoped name introduces the identifier of the outermost
    #  scope of the scoped name."
    #
-   # This is perfectly compatible with role composition of Mosee, e.g.:
-   #
+   # This is perfectly compatible with role composition.
    #
    # Also:
    #
    # "A qualified name of the form ::X::Y::Z does not cause X to be introduced, but a qualified name of the form X::Y::Z does."
    #
-   #  role dom::test {
-   #    use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
-   #    has 'intest' => (is => 'rw', isa => PositiveOrZeroInt, default => 3);
-   #  };
+   # C.f. processing of IDL::AST::scopedName
    #
-   #  role dom::DOMException {
-   #    use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
-   #    has 'code' => (is => 'rw', isa => PositiveOrZeroInt, default => 2);
-   #    has 'intest' => (is => 'rw', isa => PositiveOrZeroInt, default => 4);
-   #    with ('dom::test');
-   #  };
-   #
-   # is illegal.
-   #
-   #
-   # So we left to delegation or explicitely remove accessors.
-   #
-   # - Types:
-
 ~%]
 #!env perl
 
@@ -80,6 +62,7 @@ use MooseX::Declare;
                     extendsHash={}
                     class_hasHash={}
                     subtypesHash={}
+                    allypesHash={}
                     bodyHash={} %]
 [% nl %]
 [%~ RETURN ~%]
@@ -102,9 +85,50 @@ use MooseX::Declare;
 [%~ BLOCK pushScope;  dummy = scope.push('::' _ what); END ~%]
 [%~ BLOCK printScope; scope.join('');          END ~%]
 [%~ BLOCK popScope;   dummy = scope.pop();     END ~%]
-[%~ BLOCK printLastScope;  scope.reverse.0;    END ~%]
 
+[% # SFQN means Scope Fully Qqalified Name %]
 [%~ BLOCK SFQN; INCLUDE printRoot; INCLUDE printScope; what ? (root.size == 0 ? what : '::' _ what) : '';  END ~%]
+
+[% # TTFQN means Type Fully Qualified Name %]
+[%~ BLOCK TTFQN ~%]
+  [%~ IF typeSpec.match('::') ~%]
+    [%~ # It is already fully qualified ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[%~ typeSpec ~%];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+    [%~ RETURN ~%]
+  [%~ END ~%]
+  [%~ # Loop on all known subtypes as this point in parsing ~%]
+  [%~ tmpScope = INCLUDE SFQN what='' ~%]
+  [%~ splitted = tmpScope.split('::') ~%]
+  [%~ i = splitted.max ~%]
+  [%~ WHILE (i >= 0) ~%]
+    [%~ tmpScope = splitted.splice(0, i) ~%]
+    [%~ IF exists(alltypesHash.$tmpScope.$typeSpec) ~%]
+      [%~ IF (i == splitted.max) ~%]
+        [%~ # Found in current scope, no need to fully qualify it ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[%~ typeSpec ~%];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ RETURN ~%]
+      [%~ END ~%]
+      [%~ # Return the fully qualified type ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[%~ tmpScope.typeSpec ~%];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+      [%~ RETURN ~%]
+    [%~ END ~%]
+  [%~ END ~%]
+  [%~ # Here we have a problem ~%]
+  [%~ PERL ~%]
+    print STDERR "Unresolved type " . $stash->get('typeSpec') . "\n"
+  [%~ END ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[%~ typeSpec ~%];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ RETURN ~%]
+[%~ END ~%]
+
 [%~ BLOCK xxxExpr ~%]
   [%~ rhs = as_list(item) ~%]
   [%~ IF rhs.max == 2 ~%]
@@ -149,6 +173,9 @@ use MooseX::Declare;
 [%~ END ~%]
 
 [%~ BLOCK printSubtypes ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(subtypesIndent) %]use MooseX::Types::Moose -all;
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ IF subtypesHash.$blockName.keys.size > 0 ~%]
     [%~ IF subtypesHash.$blockName.exists('PositiveOrZeroInt') ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
@@ -158,7 +185,6 @@ use MooseX::Declare;
     [%~ END ~%]
     [%~ IF subtypesHash.$blockName.keys.size > 0 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(subtypesIndent) %]use MooseX::Types::Moose -all;
 [% sp(subtypesIndent) %]use MooseX::Types -declare => [qw/[%~ subtypesHash.$blockName.keys.join(' ') ~%]/];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
     [%~ END ~%]
@@ -177,6 +203,7 @@ use MooseX::Declare;
   [%~ useHash.$blockName = {} ~%]
   [%~ class_hasHash.$blockName = 0 ~%]
   [%~ subtypesHash.$blockName = {} ~%]
+  [%~ alltypesHash.$blockName = {} ~%]
   [%~ withHash.$blockName = [] ~%]
   [%~ extendsHash.$blockName = [] ~%]
 [%~ END ~%]
@@ -185,6 +212,20 @@ use MooseX::Declare;
   [%~ blockName = INCLUDE SFQN what='' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(blockIndent); blockType _ ' ' _ blockName %] {
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%# We want to systematically import type constraints from the outer scope %]
+  [%# This has to be done now, and not after an eventual MooseX::Types -declare %]
+  [%# This is ensuring the VISIBILITY is all type constraints and methods %]
+  [%# but this does NOT meanThis is ensuring the VISIBILITY is all type constraints and methods %]
+  [%~ IF blockName.match('::') ~%]
+    [%~ splitted = blockName.split('::') ~%]
+    [%~ dummy = splitted.pop ~%]
+    [%~ previousBlockName = splitted.join('::') ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(blockIndent) %]use [% previousBlockName %] ':all';
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% INCLUDE printUse useIndent=blockIndent+2 %]
 [% INCLUDE printClassHas classHasIndent=blockIndent+2 %]
 [% INCLUDE printSubtypes subtypesIndent=blockIndent+2 %]
@@ -213,7 +254,7 @@ use MooseX::Declare;
         [%~ INCLUDE initBlock blockName=tmpScope ~%]
         [%~ bodyHash.$tmpScope = INCLUDE ast2perl item=as_list(item).3 newindent=indent+2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% INCLUDE printBlock blockIndent=indent blockType='class' %]
+[% INCLUDE printBlock blockIndent=indent blockType='role' %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE popRoot ~%]
         [%~ RETURN ~%]
@@ -226,11 +267,16 @@ use MooseX::Declare;
 
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
         [%~ IF identifier.match('^::') ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]role [% identifier %] {};
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
           [%~ identifier = "'" _ identifier _ "'" ~%]
         [%~ ELSE ~%]
           [%~ identifier = INCLUDE SFQN what=identifier ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]role [% identifier %] {};
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ END ~%]
-        [%~ withHash.$tmpScope.unshift('\'' _ identifier _ '\'') ~%]
         [%~ RETURN ~%]
 
       [%~################################################ ~%]
@@ -243,10 +289,10 @@ use MooseX::Declare;
         [%~ INCLUDE pushScope what=identifier ~%]
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
         [%~ INCLUDE initBlock blockName=tmpScope ~%]
-        [%~ extendsHash.$tmpScope.push('\'Throwable::Error\'') ~%]
+        [%~ withHash.$tmpScope.unshift('\'Throwable\'') ~%]
         [%~ bodyHash.$tmpScope = INCLUDE ast2perl memberCtx='attribute' item=memberAny newindent=indent+2 | trim %]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% INCLUDE printBlock blockIndent=indent blockType='class' %]
+[% INCLUDE printBlock blockIndent=indent blockType='role' %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE popScope ~%]
         [%~ RETURN ~%]
@@ -300,8 +346,8 @@ use MooseX::Declare;
 
         [%~ tmpScope = INCLUDE SFQN what=identifier ~%]
         [%~ INCLUDE initBlock blockName=tmpScope ~%]
-        [%~ use = 'MooseX::Interface' ~%]
-        [%~ useHash.$tmpScope.$use = 1 ~%]
+        [%~ #use = 'MooseX::Interface' ~%]
+        [%~ #useHash.$tmpScope.$use = 1 ~%]
         [%~ INCLUDE ast2perl tmpScopeForInheritance=tmpScope item=interfaceInheritanceSpecMaybe newindent=indent+2 ~%]
         [% INCLUDE pushScope what=identifier %]
         [%~# interfaceDcl will close the scope ~%]
@@ -318,6 +364,7 @@ use MooseX::Declare;
         [%~# interfaceHeader has opened the scope ~%]
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
         [%~ # JDD bodyHash.$tmpScope = INCLUDE ast2perl item=interfaceBody newindent=indent+2 %]
+        [%~ bodyHash.$tmpScope = INCLUDE ast2perl item=interfaceBody newindent=indent+2 %]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [%~ INCLUDE printBlock blockIndent=indent blockType='role' ~%]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -466,6 +513,7 @@ use MooseX::Declare;
       [%~################################################ ~%]
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
         [%~ subtypesHash.$tmpScope.PositiveOrZeroInt = 1 ~%]
+        [%~ alltypesHash.$tmpScope.PositiveOrZeroInt = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]PositiveOrZeroInt
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -612,10 +660,20 @@ use MooseX::Declare;
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::scopedName' ~%]
       [%~################################################ ~%]
+        [%# scopedName = INCLUDE SFQN what=lexeme(as_list(item)) %]
+        [% scopedName = lexeme(as_list(item)) %]
+        [%~# If scopedName is in the form X::Y::Z then scope X::Y is introduced ~%]
+        [% IF (matches = scopedName.match('^[^:]+::')) %]
+          [%~ splitted = scopedName.split('::') ~%]
+          [%~ latest = splitted.pop ~%]
+          [%~ toImport = splitted.join('::') ~%]
+          [%~ tmpScope = INCLUDE SFQN what='' ~%]
+          [%~ dummy = withHash.$tmpScope.unshift('\'' _ toImport _ '\'') ~%]
+        [% END %]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]'[%~ INCLUDE SFQN what=lexeme(as_list(item)) %]'
+[% sp(indent) %][%~ scopedName %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-          [%~ RETURN ~%]
+        [%~ RETURN ~%]
 
       [%~################################################ ~%]
       [%~ CASE 'IDL::AST::identifier' ~%]
@@ -697,6 +755,7 @@ use MooseX::Declare;
         [%~ typeSpec = INCLUDE ast2perl item=rhs.2 | trim ~%]
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
         [%~ subtypesHash.$tmpScope.$identifier = typeSpec ~%]
+        [%~ alltypesHash.$tmpScope.$typeSpec = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]subtype [% identifier %], as [% typeSpec %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -710,6 +769,7 @@ use MooseX::Declare;
         [%~ memberList = INCLUDE ast2perl memberCtx='structure' item=rhs.3 newindent=indent+2 | trim %]
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
         [%~ subtypesHash.$tmpScope.$identifier = memberList ~%]
+        [%~ alltypesHash.$tmpScope.$memberList = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]subtype [% identifier %], as '[% memberList %]';
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -725,6 +785,7 @@ use MooseX::Declare;
         [%~ FOREACH declarator IN declarators.split(', ') ~%]
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
         [%~ subtypesHash.$tmpScope.$declarator = typeSpec ~%]
+        [%~ alltypesHash.$tmpScope.$typeSpec = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% loop.index() > 0 ? nl : '' %][% sp(indent) %]subtype [% declarator %], as [% typeSpec %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
