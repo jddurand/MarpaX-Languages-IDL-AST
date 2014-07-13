@@ -285,20 +285,7 @@ use MooseX::Declare;
         [%~ rhs = as_list(item) ~%]
         [%~ identifier = INCLUDE printLexeme item=rhs.2 | trim ~%]
 
-        [%~ tmpScope = INCLUDE SFQN what='' ~%]
-        [%~ IF identifier.match('^::') ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]role [% identifier %] {};
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-        [%~ subtypesDeclHash.$tmpScope.$identifier = typeSpec ~%]
-          [%~ identifier = "'" _ identifier _ "'" ~%]
-        [%~ ELSE ~%]
-          [%~ subtypesDeclHash.$tmpScope.$identifier = typeSpec ~%]
-          [%~ fullIdentifier = INCLUDE SFQN what=identifier ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]role_type [% identifier %], {role => as [% fullIdentifier %]};
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-        [%~ END ~%]
+        [%~# Not needed in our implementation: everything is a role ~%]
         [%~ RETURN ~%]
 
       [%~################################################ ~%]
@@ -398,11 +385,12 @@ use MooseX::Declare;
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ identifier = INCLUDE printLastScope ~%]
         [%~ identifier = identifier.replace('::', '') ~%]
+        [%~ scopeJustClosed = INCLUDE SFQN what='' ~%]
         [%~ INCLUDE popScope ~%]
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
         [%~ subtypesDeclHash.$tmpScope.$identifier = '' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]role_type [% identifier %], {role => as [% identifier %]};
+[% sp(indent) %]role_type [% identifier %], {role => as [% scopeJustClosed %]};
 
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ RETURN ~%]
@@ -706,9 +694,16 @@ use MooseX::Declare;
           [%~ tmpScope = INCLUDE SFQN what='' ~%]
           [%~ dummy = withHash.$tmpScope.unshift('\'' _ toImport _ '\'') ~%]
         [% END %]
+        [%~# If scopedName matches '::' it is already qualified ~%]
+        [% IF (matches = scopedName.match('::')) %]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %][%~ scopedName %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [% ELSE %]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %][%~ INCLUDE SFQN what=scopedName %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [% END %]
         [%~ RETURN ~%]
 
       [%~################################################ ~%]
