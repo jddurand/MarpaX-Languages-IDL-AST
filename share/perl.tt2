@@ -61,7 +61,7 @@ use MooseX::Declare;
                     useHash={}
                     extendsHash={}
                     class_hasHash={}
-                    subtypesHash={}
+                    subtypesDeclHash={}
                     allypesHash={}
                     bodyHash={} %]
 [% nl %]
@@ -85,6 +85,7 @@ use MooseX::Declare;
 [%~ BLOCK pushScope;  dummy = scope.push('::' _ what); END ~%]
 [%~ BLOCK printScope; scope.join('');          END ~%]
 [%~ BLOCK popScope;   dummy = scope.pop();     END ~%]
+[%~ BLOCK printLastScope;  scope.reverse.0;    END ~%]
 
 [% # SFQN means Scope Fully Qqalified Name %]
 [%~ BLOCK SFQN; INCLUDE printRoot; INCLUDE printScope; what ? (root.size == 0 ? what : '::' _ what) : '';  END ~%]
@@ -98,7 +99,7 @@ use MooseX::Declare;
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
     [%~ RETURN ~%]
   [%~ END ~%]
-  [%~ # Loop on all known subtypes as this point in parsing ~%]
+  [%~ # Loop on all known subtypesDecl as this point in parsing ~%]
   [%~ tmpScope = INCLUDE SFQN what='' ~%]
   [%~ splitted = tmpScope.split('::') ~%]
   [%~ i = splitted.max ~%]
@@ -172,37 +173,35 @@ use MooseX::Declare;
   [%~ END ~%]
 [%~ END ~%]
 
-[%~ BLOCK printSubtypes ~%]
+[%~ BLOCK printSubtypesDecl ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(subtypesIndent) %]use MooseX::Types::Moose -all;
+[% sp(subtypesDeclIndent) %]use MooseX::Types::Moose -all;
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-  [%~ IF subtypesHash.$blockName.keys.size > 0 ~%]
-    [%~ IF subtypesHash.$blockName.exists('PositiveOrZeroInt') ~%]
+  [%~ IF subtypesDeclHash.$blockName.keys.size > 0 ~%]
+    [%~ IF subtypesDeclHash.$blockName.exists('PositiveOrZeroInt') ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(subtypesIndent) %]use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
+[% sp(subtypesDeclIndent) %]use MooseX::Types::Common::Numeric qw/PositiveOrZeroInt/;
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-    [%~ subtypesHash.$blockName.delete('PositiveOrZeroInt') ~%]
+    [%~ subtypesDeclHash.$blockName.delete('PositiveOrZeroInt') ~%]
     [%~ END ~%]
-    [%~ IF subtypesHash.$blockName.keys.size > 0 ~%]
+    [%~ IF subtypesDeclHash.$blockName.keys.size > 0 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(subtypesIndent) %]use MooseX::Types -declare => [qw/[%~ subtypesHash.$blockName.keys.join(' ') ~%]/];
+[% sp(subtypesDeclIndent) %]use MooseX::Types -declare => [qw/[%~ subtypesDeclHash.$blockName.keys.join(' ') ~%]/];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
     [%~ END ~%]
   [%~ END ~%]
 [%~ END ~%]
 
 [%~ BLOCK printClassHas ~%]
-  [%~ IF class_hasHash.$blockName  ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(classHasIndent) %]use MooseX::ClassAttribute;
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-  [%~ END ~%]
 [%~ END ~%]
 
 [%~ BLOCK initBlock ~%]
   [%~ useHash.$blockName = {} ~%]
   [%~ class_hasHash.$blockName = 0 ~%]
-  [%~ subtypesHash.$blockName = {} ~%]
+  [%~ subtypesDeclHash.$blockName = {} ~%]
   [%~ alltypesHash.$blockName = {} ~%]
   [%~ withHash.$blockName = [] ~%]
   [%~ extendsHash.$blockName = [] ~%]
@@ -213,22 +212,43 @@ use MooseX::Declare;
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(blockIndent); blockType _ ' ' _ blockName %] {
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-  [%# We want to systematically import type constraints from the outer scope %]
-  [%# This has to be done now, and not after an eventual MooseX::Types -declare %]
-  [%# This is ensuring the VISIBILITY is all type constraints and methods %]
-  [%# but this does NOT meanThis is ensuring the VISIBILITY is all type constraints and methods %]
+  [%# We want to systematically import type constraints from the outer scope ~%]
+  [%# This has to be done now, and not after an eventual MooseX::Types -declare ~%]
+  [%# This is ensuring the VISIBILITY is all type constraints and methods ~%]
+  [%# but this does NOT meanThis is ensuring the VISIBILITY is all type constraints and methods ~%]
   [%~ IF blockName.match('::') ~%]
     [%~ splitted = blockName.split('::') ~%]
     [%~ dummy = splitted.pop ~%]
     [%~ previousBlockName = splitted.join('::') ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(blockIndent) %]use [% previousBlockName %] ':all';
+[% sp(blockIndent+2) %]use [% previousBlockName %] ':all';
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ IF useHash.$blockName.keys.size > 0 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% INCLUDE printUse useIndent=blockIndent+2 %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ IF class_hasHash.$blockName  ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% INCLUDE printClassHas classHasIndent=blockIndent+2 %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ IF blockName.match('::') ~%]
+    [%# Inside a role or a class, we want to systematically have an associated type ~%]
+    [%~ identifier = INCLUDE printLastScope ~%]
+    [%~ identifier = identifier.replace('::', '') ~%]
+    [%~ subtypesDeclHash.$blockName.$identifier = '' ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% INCLUDE printSubtypesDecl subtypesDeclIndent=blockIndent+2 %]
+[% sp(blockIndent+2) %][% blockType %]_type [% identifier %], {[% blockType %] => as [% blockName %]};
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ ELSE ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% INCLUDE printSubtypesDecl subtypesDeclIndent=blockIndent+2 %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% INCLUDE printUse useIndent=blockIndent+2 %]
-[% INCLUDE printClassHas classHasIndent=blockIndent+2 %]
-[% INCLUDE printSubtypes subtypesIndent=blockIndent+2 %]
 [% sp(blockIndent+2); bodyHash.$blockName %]
 [% INCLUDE printWith withIndent=blockIndent+2 %]
 [% INCLUDE printExtends extendsIndent=blockIndent+2 %]
@@ -270,11 +290,13 @@ use MooseX::Declare;
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]role [% identifier %] {};
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ subtypesDeclHash.$tmpScope.$identifier = typeSpec ~%]
           [%~ identifier = "'" _ identifier _ "'" ~%]
         [%~ ELSE ~%]
-          [%~ identifier = INCLUDE SFQN what=identifier ~%]
+          [%~ subtypesDeclHash.$tmpScope.$identifier = typeSpec ~%]
+          [%~ fullIdentifier = INCLUDE SFQN what=identifier ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% sp(indent) %]role [% identifier %] {};
+[% sp(indent) %]role_type [% identifier %], {role => as [% fullIdentifier %]};
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ END ~%]
         [%~ RETURN ~%]
@@ -295,6 +317,12 @@ use MooseX::Declare;
 [% INCLUDE printBlock blockIndent=indent blockType='role' %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ INCLUDE popScope ~%]
+        [%~ tmpScope = INCLUDE SFQN what='' ~%]
+        [%~ subtypesDeclHash.$tmpScope.$identifier = '' ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]role_type [% identifier %], {role => as [% identifier %]};
+
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ RETURN ~%]
 
       [%~################################################ ~%]
@@ -368,7 +396,15 @@ use MooseX::Declare;
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [%~ INCLUDE printBlock blockIndent=indent blockType='role' ~%]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+        [%~ identifier = INCLUDE printLastScope ~%]
+        [%~ identifier = identifier.replace('::', '') ~%]
         [%~ INCLUDE popScope ~%]
+        [%~ tmpScope = INCLUDE SFQN what='' ~%]
+        [%~ subtypesDeclHash.$tmpScope.$identifier = '' ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% sp(indent) %]role_type [% identifier %], {role => as [% identifier %]};
+
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
         [%~ RETURN ~%]
 
       [%~################################################ ~%]
@@ -512,7 +548,7 @@ use MooseX::Declare;
       [%~ CASE 'IDL::AST::unsignedInt' ~%]
       [%~################################################ ~%]
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
-        [%~ subtypesHash.$tmpScope.PositiveOrZeroInt = 1 ~%]
+        [%~ subtypesDeclHash.$tmpScope.PositiveOrZeroInt = 1 ~%]
         [%~ alltypesHash.$tmpScope.PositiveOrZeroInt = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]PositiveOrZeroInt
@@ -754,7 +790,7 @@ use MooseX::Declare;
         [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
         [%~ typeSpec = INCLUDE ast2perl item=rhs.2 | trim ~%]
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
-        [%~ subtypesHash.$tmpScope.$identifier = typeSpec ~%]
+        [%~ subtypesDeclHash.$tmpScope.$identifier = typeSpec ~%]
         [%~ alltypesHash.$tmpScope.$typeSpec = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]subtype [% identifier %], as [% typeSpec %];
@@ -768,7 +804,7 @@ use MooseX::Declare;
         [%~ identifier = INCLUDE printLexeme item=rhs.1 | trim ~%]
         [%~ memberList = INCLUDE ast2perl memberCtx='structure' item=rhs.3 newindent=indent+2 | trim %]
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
-        [%~ subtypesHash.$tmpScope.$identifier = memberList ~%]
+        [%~ subtypesDeclHash.$tmpScope.$identifier = memberList ~%]
         [%~ alltypesHash.$tmpScope.$memberList = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% sp(indent) %]subtype [% identifier %], as '[% memberList %]';
@@ -784,7 +820,7 @@ use MooseX::Declare;
         [%~# We are lucky that only this rule correspond to typedef - ~%]
         [%~ FOREACH declarator IN declarators.split(', ') ~%]
         [%~ tmpScope = INCLUDE SFQN what='' ~%]
-        [%~ subtypesHash.$tmpScope.$declarator = typeSpec ~%]
+        [%~ subtypesDeclHash.$tmpScope.$declarator = typeSpec ~%]
         [%~ alltypesHash.$tmpScope.$typeSpec = 1 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% loop.index() > 0 ? nl : '' %][% sp(indent) %]subtype [% declarator %], as [% typeSpec %];
