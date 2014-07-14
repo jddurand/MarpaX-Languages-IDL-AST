@@ -4,7 +4,7 @@ use warnings FATAL => 'all';
 package MarpaX::Languages::IDL::AST;
 use MarpaX::Languages::IDL::AST::Value;
 use MarpaX::Languages::IDL::AST::Util;
-use Scalar::Util qw/blessed/;
+use Scalar::Util qw/blessed reftype refaddr/;
 use Data::Dumper;
 use Template;
 use Template::Constants qw/:chomp :debug/;
@@ -156,7 +156,7 @@ sub parse {
     #
     $self->{_ast} = ${$value};
 
-    return $self->generate();
+    return $self;
 }
 
 =head2 $self->ast()
@@ -241,6 +241,7 @@ sub generate {
     #
     $ttVarsHashp->{blessed} //= sub {return blessed(shift) || ''; };
     $ttVarsHashp->{reftype} //= sub {return reftype(shift) || ''; };
+    $ttVarsHashp->{refaddr} //= sub {return refaddr(shift) || 0; };
     #
     # TT2 does not like blessed arrays
     #
@@ -268,7 +269,7 @@ sub generate {
     };
     $ttVarsHashp->{ast} //= $ast;
 
-    my $output = '';
+    $self->{_output} = '';
     $tt->process("$target.tt2", $ttVarsHashp, \$self->{_output}) || croak $tt->error();
 
     return $self;
