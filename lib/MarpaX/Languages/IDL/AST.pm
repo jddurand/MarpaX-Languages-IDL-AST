@@ -7,6 +7,7 @@ use MarpaX::Languages::IDL::AST::Util;
 use Scalar::Util qw/blessed reftype refaddr/;
 use Data::Dumper;
 use Template;
+use Template::Stash;
 use Template::Constants qw/:chomp :debug/;
 use File::ShareDir ':ALL';
 use constant {
@@ -183,7 +184,7 @@ sub output {
     return $self->{_output};
 }
 
-=head2 $self->generate($ast, $target, $targetOptionHashp)
+=head2 $self->generate($ast, $template, $targetOptionHashp)
 
 Generate files for the given AST $ast.
 
@@ -193,10 +194,9 @@ Generate files for the given AST $ast.
 
 AST as produced by the method $self->parse(). Default to $self->ast().
 
-=item $target
+=item $template
 
-Target language. Default to 'perl'.
-Supported values are those distributed with this package, c.f. the target directory.
+Template-Toolkit template name. Default to 'moosex.tt2', available in this distribution.
 
 =item $targetOptionHashp
 
@@ -209,10 +209,10 @@ This method returns $self.
 =cut
 
 sub generate {
-    my ($self, $ast, $target, $targetOptionHashp) = @_;
+    my ($self, $ast, $template, $targetOptionHashp) = @_;
 
     $ast               //= $self->ast();
-    $target            //= 'perl';
+    $template          //= 'moosex.tt2';
     $targetOptionHashp //= {};
 
     if (ref($targetOptionHashp) ne 'HASH') {
@@ -225,6 +225,8 @@ sub generate {
     $ttOptionHashp->{EVAL_PERL} //= 1;
     $ttOptionHashp->{PRE_CHOMP} //= CHOMP_NONE;
     $ttOptionHashp->{POST_CHOMP} //= CHOMP_NONE;
+    $ttOptionHashp->{WHILE_MAX} //= 10;
+    local $Template::Directive::WHILE_MAX = 1000000000;
     my $tt = Template->new($ttOptionHashp) || croak "$Template::ERROR";
 
     #
@@ -252,6 +254,7 @@ sub generate {
     #
     # General hooks
     #
+    $ttVarsHashp->{ast} //= $ast;
     $ttVarsHashp->{cr}     //= sub {return "\r" x (shift // 0); };
     $ttVarsHashp->{nl}     //= sub {return "\n" x (shift // 0); };
     $ttVarsHashp->{tab}    //= sub {return "\t" x (shift // 0); };
@@ -264,13 +267,27 @@ sub generate {
 	} elsif (! $ref) {
 	    return $item;
 	} else {
-	    return '';
+	    croak "lexeme callback called on something with type $ref";
 	}
     };
-    $ttVarsHashp->{ast} //= $ast;
+
+    my $stash = Template::Stash->new();
+  $stash->define_vmethod(
+    scalar => asList => sub {
+        my $arrayp = shift;
+        print STDERR "\$arrayp = $arrayp\n";
+        return \@{$arrayp};
+    }
+  );
+  $stash->define_vmethod(
+    hash => asList => sub { die "Oups; hash ?" }
+  );
+  $stash->define_vmethod(
+    list => asList => sub { die "Oups; list ?" }
+  );
 
     $self->{_output} = '';
-    $tt->process("$target.tt2", $ttVarsHashp, \$self->{_output}) || croak $tt->error();
+    $tt->process($template, $ttVarsHashp, \$self->{_output}) || croak $tt->error();
 
     return $self;
 }
@@ -294,62 +311,62 @@ L<Marpa::R2>
 
 __DATA__
 :default ::= action => [values] bless => ::lhs
-lexeme default = action => [ start, length, value ] latm => 1# bless => ::name
+lexeme default = action => [ start, length, value ] latm => 1 bless => ::name
 
 :start ::= <specification>
 
 <specification>              ::= <importAny> <definitionMany>
-<definition>                 ::= <typeDcl> ';'
-                             |   <constDcl> ';'
-                             |   <exceptDcl> ';'
-                             |   <interface> ';'
-                             |   <module> ';'
-                             |   <value> ';'
-                             |   <typeIdDcl> ';'
-                             |   <typePrefixDcl> ';'
-                             |   <event> ';'
-                             |   <component> ';'
-                             |   <homeDcl> ';'
-<module>                     ::= 'module' <identifier> '{' <definitionMany> '}'
+<definition>                 ::= <typeDcl> SEMICOLON
+                             |   <constDcl> SEMICOLON
+                             |   <exceptDcl> SEMICOLON
+                             |   <interface> SEMICOLON
+                             |   <module> SEMICOLON
+                             |   <value> SEMICOLON
+                             |   <typeIdDcl> SEMICOLON
+                             |   <typePrefixDcl> SEMICOLON
+                             |   <event> SEMICOLON
+                             |   <component> SEMICOLON
+                             |   <homeDcl> SEMICOLON
+<module>                     ::= MODULE <identifier> LCURLY <definitionMany> RCURLY
 <interface>                  ::= <interfaceDcl>
                              |   <forwardDcl>
-<interfaceDcl>               ::= <interfaceHeader> '{' <interfaceBody> '}'
-<forwardDcl>                 ::= <abstractOrLocalMaybe> 'interface' <identifier>
-<interfaceHeader>            ::= <abstractOrLocalMaybe> 'interface' <identifier> <interfaceInheritanceSpecMaybe>
+<interfaceDcl>               ::= <interfaceHeader> LCURLY <interfaceBody> RCURLY
+<forwardDcl>                 ::= <abstractOrLocalMaybe> INTERFACE <identifier>
+<interfaceHeader>            ::= <abstractOrLocalMaybe> INTERFACE <identifier> <interfaceInheritanceSpecMaybe>
 <interfaceBody>              ::= <export>*
-<export>                     ::= <typeDcl> ';'
-                             |   <constDcl> ';'
-                             |   <exceptDcl> ';'
-                             |   <attrDcl> ';'
-                             |   <opDcl> ';'
-                             |   <typeIdDcl> ';'
-                             |   <typePrefixDcl> ';'
-<interfaceInheritanceSpec>   ::= ':' <interfaceNameListMany>
+<export>                     ::= <typeDcl> SEMICOLON
+                             |   <constDcl> SEMICOLON
+                             |   <exceptDcl> SEMICOLON
+                             |   <attrDcl> SEMICOLON
+                             |   <opDcl> SEMICOLON
+                             |   <typeIdDcl> SEMICOLON
+                             |   <typePrefixDcl> SEMICOLON
+<interfaceInheritanceSpec>   ::= COLON <interfaceNameListMany>
 <interfaceName>              ::= <scopedName>
 #<scopedName>                 ::= <identifier>
-#                             |   '::' <identifier>
-#                             |   <scopedName> '::' <identifier>
+#                             |   COLONCOLON <identifier>
+#                             |   <scopedName> COLONCOLON <identifier>
 <scopedName>                 ::= <identifier>+ separator => <coloncolon>               action => _scopedName
 <value>                      ::= <valueDcl>
                              |   <valueAbsDcl>
                              |   <valueBoxDcl>
                              |   <valueForwardDcl>
-<valueForwardDcl>            ::= <abstractMaybe> 'valuetype' <identifier>
-<valueBoxDcl>                ::= 'valuetype' <identifier> <typeSpec>
-<valueAbsDcl>                ::= 'abstract' 'valuetype' <identifier> <valueInheritanceSpecMaybe> '{' <exportAny> '}'
-<valueDcl>                   ::= <valueHeader> '{' <valueElementAny> '}'
-<valueHeader>                ::= <customMaybe> 'valuetype' <identifier> <valueInheritanceSpecMaybe>
+<valueForwardDcl>            ::= <abstractMaybe> VALUETYPE <identifier>
+<valueBoxDcl>                ::= VALUETYPE <identifier> <typeSpec>
+<valueAbsDcl>                ::= ABSTRACT VALUETYPE <identifier> <valueInheritanceSpecMaybe> LCURLY <exportAny> RCURLY
+<valueDcl>                   ::= <valueHeader> LCURLY <valueElementAny> RCURLY
+<valueHeader>                ::= <customMaybe> VALUETYPE <identifier> <valueInheritanceSpecMaybe>
 <valueInheritanceSpec>       ::= <valueInheritanceSpec1ValuesMaybe> <valueInheritanceSpec2InterfacesMaybe>
 <valueName>                  ::= <scopedName>
 <valueElement>               ::= <export>
                              |   <stateMember>
                              |   <initDcl>
-<stateMember>                ::= <publicOrPrivate> <typeSpec> <declarators> ';'
-<initDcl>                    ::= 'factory' <identifier> '(' <initParamDeclsMaybe> ')' <raisesExprMaybe> ';'
+<stateMember>                ::= <publicOrPrivate> <typeSpec> <declarators> SEMICOLON
+<initDcl>                    ::= FACTORY <identifier> LPAREN <initParamDeclsMaybe> RPAREN <raisesExprMaybe> SEMICOLON
 <initParamDecls>             ::= <initParamDeclListMany>
 <initParamDecl>              ::= <initParamAttribute> <paramTypeSpec> <simpleDeclarator>
-<initParamAttribute>         ::= 'in'
-<constDcl>                   ::= 'const' <constType> <identifier> '=' <constExp>
+<initParamAttribute>         ::= IN
+<constDcl>                   ::= CONST <constType> <identifier> EQUAL <constExp>
 <constType>                  ::= <integerType>
                              |   <charType>
                              |   <wideCharType>
@@ -362,29 +379,29 @@ lexeme default = action => [ start, length, value ] latm => 1# bless => ::name
                              |   <octetType>
 <constExp>                   ::= <orExpr>
 <orExpr>                     ::= <xorExpr>
-                             |   <orExpr> '|' <xorExpr>
+                             |   <orExpr> OR <xorExpr>
 <xorExpr>                    ::= <andExpr>
-                             |   <xorExpr> '^' <andExpr>
+                             |   <xorExpr> XOR <andExpr>
 <andExpr>                    ::= <shiftExpr>
-                             |   <andExpr> '&' <shiftExpr>
+                             |   <andExpr> AND <shiftExpr>
 <shiftExpr>                  ::= <addExpr>
-                             |   <shiftExpr> '>>' <addExpr>
-                             |   <shiftExpr> '<<' <addExpr>
+                             |   <shiftExpr> RSHIFT <addExpr>
+                             |   <shiftExpr> LSHIFT <addExpr>
 <addExpr>                    ::= <multExpr>
-                             |   <addExpr> '+' <multExpr>
-                             |   <addExpr> '-' <multExpr>
+                             |   <addExpr> PLUS <multExpr>
+                             |   <addExpr> MINUS <multExpr>
 <multExpr>                   ::= <unaryExpr>
-                             |   <multExpr> '*' <unaryExpr>
-                             |   <multExpr> '/' <unaryExpr>
-                             |   <multExpr> '%' <unaryExpr>
+                             |   <multExpr> MUL <unaryExpr>
+                             |   <multExpr> DIV <unaryExpr>
+                             |   <multExpr> MOD <unaryExpr>
 <unaryExpr>                  ::= <unaryOperator> <primaryExpr>
                              | <primaryExpr>
-<unaryOperator>              ::= '-'
-                             | '+'
-                             | '~'
+<unaryOperator>              ::= MINUS
+                             | PLUS
+                             | TILDE
 <primaryExpr>                ::= <scopedName>
                              |   <literal>
-                             |   '(' <constExp> ')'
+                             |   LPAREN <constExp> RPAREN
 <literal>                    ::= <integerLiteral>
                              |   <stringLiteral>
                              |   <wideStringLiteral>
@@ -393,14 +410,14 @@ lexeme default = action => [ start, length, value ] latm => 1# bless => ::name
                              |   <fixedPtLiteral>
                              |   <floatingPtLiteral>
                              |   <booleanLiteral>
-<booleanLiteral>             ::= 'TRUE'
-                             |   'FALSE'
+<booleanLiteral>             ::= TRUE
+                             |   FALSE
 <positiveIntConst>           ::= <constExp>
-<typeDcl>                    ::= 'typedef' <typeDeclarator>
+<typeDcl>                    ::= TYPEDEF <typeDeclarator>
                              |   <structType>
                              |   <unionType>
                              |   <enumType>
-                             |   'native' <simpleDeclarator>
+                             |   NATIVE <simpleDeclarator>
                              |   <constrForwardDecl>
 <typeDeclarator>             ::= <typeSpec> <declarators>
 <typeSpec>                   ::= <simpleTypeSpec>
@@ -429,160 +446,162 @@ lexeme default = action => [ start, length, value ] latm => 1# bless => ::name
                              |   <complexDeclarator>
 <simpleDeclarator>           ::= <identifier>
 <complexDeclarator>          ::= <arrayDeclarator>
-<floatingPtType>             ::= 'float'
-                             |   'double'
-                             |   'long' 'double'
+<floatingPtType>             ::= FLOAT
+                             |   DOUBLE
+                             |   LONG DOUBLE
 <integerType>                ::= <signedInt>
                              |   <unsignedInt>
 <signedInt>                  ::= <signedShortInt>
                              |   <signedLongInt>
                              |   <signedLonglongInt>
-<signedShortInt>             ::= 'short'
-<signedLongInt>              ::= 'long'
-<signedLonglongInt>          ::= 'long' 'long'
+<signedShortInt>             ::= SHORT
+<signedLongInt>              ::= LONG
+<signedLonglongInt>          ::= LONG LONG
 <unsignedInt>                ::= <unsignedShortInt>
                              |   <unsignedLongInt>
                              |   <unsignedLonglongInt>
-<unsignedShortInt>           ::= 'unsigned' 'short'
-<unsignedLongInt>            ::= 'unsigned' 'long'
-<unsignedLonglongInt>        ::= 'unsigned' 'long' 'long'
-<charType>                   ::= 'char'
-<wideCharType>               ::= 'wchar'
-<booleanType>                ::= 'boolean'
-<octetType>                  ::= 'octet'
-<anyType>                    ::= 'any'
-<objectType>                 ::= 'Object'
-<structType>                 ::= 'struct' <identifier> '{' <memberList> '}'
+<unsignedShortInt>           ::= UNSIGNED SHORT
+<unsignedLongInt>            ::= UNSIGNED LONG
+<unsignedLonglongInt>        ::= UNSIGNED LONG LONG
+<charType>                   ::= CHAR
+<wideCharType>               ::= WCHAR
+<booleanType>                ::= BOOLEAN
+<octetType>                  ::= OCTET
+<anyType>                    ::= ANY
+<objectType>                 ::= OBJECT
+<structType>                 ::= STRUCT <identifier> LCURLY <memberList> RCURLY
 <memberList>                 ::= <member>+
-<member>                     ::= <typeSpec> <declarators> ';'
-<unionType>                  ::= 'union' <identifier> 'switch' '(' <switchTypeSpec> ')' '{' <switchBody> '}'
+<member>                     ::= <typeSpec> <declarators> SEMICOLON
+<unionType>                  ::= UNION <identifier> SWITCH LPAREN <switchTypeSpec> RPAREN LCURLY <switchBody> RCURLY
 <switchTypeSpec>             ::=<integerType>
                              | <charType>
                              | <booleanType>
                              | <enumType>
                              | <scopedName>
 <switchBody>                 ::= <case>+
-<case>                       ::= <caseLabelAny> <elementSpec> ';'
-<caseLabel>                  ::= 'case' <constExp> ':'
-                             | 'default' ':'
+<case>                       ::= <caseLabelAny> <elementSpec> SEMICOLON
+<caseLabel>                  ::= CASE <constExp> COLON
+                             | DEFAULT COLON
 <elementSpec>                ::= <typeSpec> <declarator>
-<enumType>                   ::= 'enum' <identifier> '{' <enumeratorListMany> '}'
+<enumType>                   ::= ENUM <identifier> LCURLY <enumeratorListMany> RCURLY
 <enumerator>                 ::= <identifier>
-<sequenceType>               ::= 'sequence' '<' <simpleTypeSpec> ',' <positiveIntConst> '>'
-                             | 'sequence' '<' <simpleTypeSpec> '>'
-<stringType>                 ::= 'string' '<' <positiveIntConst> '>'
-                             | 'string'
-<wideStringType>             ::= 'wstring' '<' <positiveIntConst> '>'
-                             | 'wstring'
+<sequenceType>               ::= SEQUENCE LT <simpleTypeSpec> COMMA <positiveIntConst> GT
+                             | SEQUENCE LT <simpleTypeSpec> GT
+<stringType>                 ::= STRING LT <positiveIntConst> GT
+                             | STRING
+<wideStringType>             ::= WSTRING LT <positiveIntConst> GT
+                             | WSTRING
 <arrayDeclarator>            ::= <identifier> <fixedArraySizeMany>
-<fixedArraySize>             ::= '[' <positiveIntConst> ']'
+<fixedArraySize>             ::= LBRACKET <positiveIntConst> RBRACKET
 <attrDcl>                    ::= <readonlyAttrSpec>
                              |   <attrSpec>
-<exceptDcl>                  ::= 'exception' <identifier> '{' <memberAny> '}'
+<exceptDcl>                  ::= EXCEPTION <identifier> LCURLY <memberAny> RCURLY
 <opDcl>                      ::= <opAttributeMaybe> <opTypeSpec> <identifier> <parameterDcls> <raisesExprMaybe> <contextExprMaybe>
-<opAttribute>                ::= 'oneway'
+<opAttribute>                ::= ONEWAY
 <opTypeSpec>                 ::= <paramTypeSpec>
-                             | 'void'
-<parameterDcls>              ::= '(' <paramDclListMany> ')'
-                             |   '(' ')'
+                             | VOID
+<parameterDcls>              ::= LPAREN <paramDclListMany> RPAREN
+                             |   LPAREN RPAREN
 <paramDcl>                   ::= <paramAttribute> <paramTypeSpec> <simpleDeclarator>
-<paramAttribute>             ::='in'
-                             |   'out'
-                             |   'inout'
-<raisesExpr>                 ::= 'raises' '(' <scopedNameListMany> ')'
-<contextExpr>                ::= 'context' '(' <stringLiteralListMany> ')'
+<paramAttribute>             ::= IN
+                             |   OUT
+                             |   INOUT
+<raisesExpr>                 ::= RAISES LPAREN <scopedNameListMany> RPAREN
+<contextExpr>                ::= CONTEXT LPAREN <stringLiteralListMany> RPAREN
 <paramTypeSpec>              ::= <baseTypeSpec>
                              | <stringType>
                              | <wideStringType>
                              | <scopedName>
-<fixedPtType>                ::= 'fixed' '<' <positiveIntConst> ',' <positiveIntConst> '>'
-<fixedPtConstType>           ::= 'fixed'
-<valueBaseType>              ::= 'ValueBase'
-<constrForwardDecl>          ::= 'struct' <identifier>
-                             |   'union' <identifier>
-<import>                     ::= 'import' <importedScope> ';'
+<fixedPtType>                ::= FIXED LT <positiveIntConst> COMMA <positiveIntConst> GT
+<fixedPtConstType>           ::= FIXED
+<valueBaseType>              ::= VALUEBASE
+<constrForwardDecl>          ::= STRUCT <identifier>
+                             |   UNION <identifier>
+<import>                     ::= IMPORT <importedScope> SEMICOLON
 <importedScope>              ::= <scopedName>
                              |   <stringLiteral>
-<typeIdDcl>                  ::= 'typeid' <scopedName> <stringLiteral>
-<typePrefixDcl>              ::= 'typeprefix' <scopedName> <stringLiteral>
-<readonlyAttrSpec>           ::= 'readonly' 'attribute' <paramTypeSpec> <readonlyAttrDeclarator>
+<typeIdDcl>                  ::= TYPEID <scopedName> <stringLiteral>
+<typePrefixDcl>              ::= TYPEPREFIX <scopedName> <stringLiteral>
+<readonlyAttrSpec>           ::= READONLY ATTRIBUTE <paramTypeSpec> <readonlyAttrDeclarator>
 <readonlyAttrDeclarator>     ::= <simpleDeclarator> <raisesExpr>
                              |   <simpleDeclaratorListMany>
-<attrSpec>                   ::= 'attribute' <paramTypeSpec> <attrDeclarator>
+<attrSpec>                   ::= ATTRIBUTE <paramTypeSpec> <attrDeclarator>
 <attrDeclarator>             ::= <simpleDeclarator> <attrRaisesExpr>
                              |   <simpleDeclaratorListMany>
 <attrRaisesExpr>             ::= <getExcepExpr> <setExcepExprMaybe>
                              |   <setExcepExpr>
-<getExcepExpr>               ::= 'getraises' <exceptionList>
-<setExcepExpr>               ::= 'setraises' <exceptionList>
-<exceptionList>              ::= '(' <scopedNameListMany> ')'
+<getExcepExpr>               ::= GETRAISES <exceptionList>
+<setExcepExpr>               ::= SETRAISES <exceptionList>
+<exceptionList>              ::= LPAREN <scopedNameListMany> RPAREN
 
 # NOTE: Grammar rules 1 through 111 with the exception of the last three lines of rule 2 constitutes the portion of IDL that
 # is not related to components.
 
 <component>                  ::= <componentDcl>
                              |   <componentForwardDcl>
-<componentForwardDcl>        ::= 'component' <identifier>
-<componentDcl>               ::= <componentHeader> '{' <componentBody> '}'
-<componentHeader>            ::= 'component' <identifier> <componentInheritanceSpecMaybe> <supportedInterfaceSpecMaybe>
-<supportedInterfaceSpec>     ::= 'supports' <scopedNameListMany>
-<componentInheritanceSpec>   ::= ':' <scopedName>
+<componentForwardDcl>        ::= COMPONENT <identifier>
+<componentDcl>               ::= <componentHeader> LCURLY <componentBody> RCURLY
+<componentHeader>            ::= COMPONENT <identifier> <componentInheritanceSpecMaybe> <supportedInterfaceSpecMaybe>
+<supportedInterfaceSpec>     ::= SUPPORTS <scopedNameListMany>
+<componentInheritanceSpec>   ::= COLON <scopedName>
 <componentBody>              ::= <componentExport>*
-<componentExport>            ::= <providesDcl> ';'
-                             |   <usesDcl> ';'
-                             |   <emitsDcl> ';'
-                             |   <publishesDcl> ';'
-                             |   <consumesDcl> ';'
-                             |   <attrDcl> ';'
-<providesDcl>                ::= 'provides' <interfaceType> <identifier>
+<componentExport>            ::= <providesDcl> SEMICOLON
+                             |   <usesDcl> SEMICOLON
+                             |   <emitsDcl> SEMICOLON
+                             |   <publishesDcl> SEMICOLON
+                             |   <consumesDcl> SEMICOLON
+                             |   <attrDcl> SEMICOLON
+<providesDcl>                ::= PROVIDES <interfaceType> <identifier>
 <interfaceType>              ::= <scopedName>
-                             |   'Object'
-<usesDcl>                    ::= 'uses' <multipleMaybe> <interfaceType> <identifier>
-<emitsDcl>                   ::= 'emits' <scopedName> <identifier>
-<publishesDcl>               ::= 'publishes' <scopedName> <identifier>
-<consumesDcl>                ::= 'consumes' <scopedName> <identifier>
+                             |   OBJECT
+<usesDcl>                    ::= USES <multipleMaybe> <interfaceType> <identifier>
+<emitsDcl>                   ::= EMITS <scopedName> <identifier>
+<publishesDcl>               ::= PUBLISHES <scopedName> <identifier>
+<consumesDcl>                ::= CONSUMES <scopedName> <identifier>
 <homeDcl>                    ::= <homeHeader> <homeBody>
-<homeHeader>                 ::= 'home' <identifier> <homeInheritanceSpecMaybe> <supportedInterfaceSpecMaybe> 'manages' <scopedName> <primaryKeySpecMaybe>
-<homeIinheritanceSpec>       ::= ':' <scopedName>
-<primaryKeySpec>             ::= 'primarykey' <scopedName>
-<homeBody>                   ::= '{' <homeExportAny> '}'
+<homeHeader>                 ::= HOME <identifier> <homeInheritanceSpecMaybe> <supportedInterfaceSpecMaybe> MANAGES <scopedName> <primaryKeySpecMaybe>
+<homeIinheritanceSpec>       ::= COLON <scopedName>
+<primaryKeySpec>             ::= PRIMARYKEY <scopedName>
+<homeBody>                   ::= LCURLY <homeExportAny> RCURLY
 <homeExport>                 ::= <export>
-                             |   <factoryDcl> ';'
-                             |   <finderDcl> ';'
-<factoryDcl>                 ::= 'factory' <identifier> '(' [ <initParamDecls> ] ')'  <raisesExprMaybe>
-<finderDcl>                  ::= 'finder' <identifier>  '(' [ <initParamDecls> ] ')'  <raisesExprMaybe>
+                             |   <factoryDcl> SEMICOLON
+                             |   <finderDcl> SEMICOLON
+<factoryDcl>                 ::= FACTORY <identifier> LPAREN [ <initParamDecls> ] RPAREN  <raisesExprMaybe>
+<finderDcl>                  ::= FINDER <identifier>  LPAREN [ <initParamDecls> ] RPAREN  <raisesExprMaybe>
 <event>                      ::= <eventDcl>
                              |   <eventAbsDcl>
                              |   <eventForwardDcl>
-<eventForwardDcl>            ::= <abstractMaybe> 'eventtype' <identifier>
-<eventAbsDcl>                ::= 'abstract' 'eventtype' <identifier> <valueInheritanceSpecMaybe> '{' <exportAny> '}'
-<eventDcl>                   ::= <eventHeader> '{' <valueElementAny> '}'
-<eventHeader>                ::= <customMaybe> 'eventtype' <identifier> <valueInheritanceSpecMaybe>
+<eventForwardDcl>            ::= <abstractMaybe> EVENTTYPE <identifier>
+<eventAbsDcl>                ::= ABSTRACT EVENTTYPE <identifier> <valueInheritanceSpecMaybe> LCURLY <exportAny> RCURLY
+<eventDcl>                   ::= <eventHeader> LCURLY <valueElementAny> RCURLY
+<eventHeader>                ::= <customMaybe> EVENTTYPE <identifier> <valueInheritanceSpecMaybe>
 
 <importAny> ::= <import>*
 <definitionMany> ::= <definition>+
-<abstractOrLocal> ::= 'abstract' | 'local'
+<abstractOrLocal> ::= ABSTRACT | LOCAL
 <abstractOrLocalMaybe> ::= <abstractOrLocal>
 <abstractOrLocalMaybe> ::=
 <interfaceInheritanceSpecMaybe> ::= <interfaceInheritanceSpec>
 <interfaceInheritanceSpecMaybe> ::=
 <interfaceNameListMany> ::= <interfaceName>+ separator => <comma>
-<abstractMaybe> ::= 'abstract'
+<abstractMaybe> ::= ABSTRACT
 <abstractMaybe> ::=
 <valueInheritanceSpecMaybe> ::= <valueInheritanceSpec>
 <valueInheritanceSpecMaybe> ::=
 <exportAny> ::= <export>*
 <valueElementAny> ::= <valueElement>*
-<customMaybe> ::= 'custom'
+<customMaybe> ::= CUSTOM
 <customMaybe> ::=
 <valueNameListMany> ::= <valueName>+ separator => <comma>
-<valueInheritanceSpec1Values> ::= ':' [ 'truncatable' ] <valueNameListMany>
+<truncatableMaybe> ::= TRUNCATABLE
+<truncatableMaybe> ::=
+<valueInheritanceSpec1Values> ::= COLON <truncatableMaybe> <valueNameListMany>
 <valueInheritanceSpec1ValuesMaybe> ::= <valueInheritanceSpec1Values>
 <valueInheritanceSpec1ValuesMaybe> ::=
-<valueInheritanceSpec2Interfaces>   ::= 'supports' <interfaceNameListMany>
+<valueInheritanceSpec2Interfaces>   ::= SUPPORTS <interfaceNameListMany>
 <valueInheritanceSpec2InterfacesMaybe> ::= <valueInheritanceSpec2Interfaces>
 <valueInheritanceSpec2InterfacesMaybe> ::=
-<publicOrPrivate> ::= 'public' | 'private'
+<publicOrPrivate> ::= PUBLIC | PRIVATE
 <initParamDeclsMaybe> ::= <initParamDecls>
 <initParamDeclsMaybe> ::=
 <raisesExprMaybe> ::= <raisesExpr>
@@ -607,17 +626,109 @@ lexeme default = action => [ start, length, value ] latm => 1# bless => ::name
 <componentInheritanceSpecMaybe> ::=
 <supportedInterfaceSpecMaybe> ::= <supportedInterfaceSpec>
 <supportedInterfaceSpecMaybe> ::=
-<multipleMaybe> ::= 'multiple'
+<multipleMaybe> ::= MULTIPLE
 <multipleMaybe> ::=
 <homeInheritanceSpecMaybe> ::= <homeIinheritanceSpec>
 <homeInheritanceSpecMaybe> ::=
 <primaryKeySpecMaybe> ::= <primaryKeySpec>
 <primaryKeySpecMaybe> ::=
 <homeExportAny> ::= <homeExport>*
-<comma> ::= ','
-<coloncolon> ::= '::'
+<comma> ::= COMMA
+<coloncolon> ::= COLONCOLON
 
-
+#
+# Everything hardcoded is a lexeme, we want to have it blessed into an array
+# The following is an exhaustive list of all IDL 3.5 keywords
+#
+SEMICOLON   ~ ';'
+MODULE      ~ 'module'
+LCURLY      ~ '{'
+RCURLY      ~ '}'
+INTERFACE   ~ 'interface'
+COLON       ~ ':'
+COLONCOLON  ~ '::'
+VALUETYPE   ~ 'valuetype'
+ABSTRACT    ~ 'abstract'
+FACTORY     ~ 'factory'
+LPAREN      ~ '('
+RPAREN      ~ ')'
+IN          ~ 'in'
+CONST       ~ 'const'
+EQUAL       ~ '='
+OR          ~ '|'
+XOR         ~ '^'
+AND         ~ '&'
+RSHIFT      ~ '>>'
+LSHIFT      ~ '<<'
+PLUS        ~ '+'
+MINUS       ~ '-'
+TILDE       ~ '~'
+MUL         ~ '*'
+DIV         ~ '/'
+MOD         ~ '%'
+TRUE        ~ 'TRUE'
+FALSE       ~ 'FALSE'
+TYPEDEF     ~ 'typedef'
+NATIVE      ~ 'native'
+FLOAT       ~ 'float'
+DOUBLE      ~ 'double'
+LONG        ~ 'long'
+SHORT       ~ 'short'
+UNSIGNED    ~ 'unsigned'
+CHAR        ~ 'char'
+WCHAR       ~ 'wchar'
+BOOLEAN     ~ 'boolean'
+OCTET       ~ 'octet'
+ANY         ~ 'any'
+OBJECT      ~ 'Object'
+STRUCT      ~ 'struct'
+UNION       ~ 'union'
+CASE        ~ 'case'
+DEFAULT     ~ 'default'
+ENUM        ~ 'enum'
+SEQUENCE    ~ 'sequence'
+LT          ~ '<'
+GT          ~ '>'
+SWITCH      ~ 'switch'
+COMMA       ~ ','
+STRING      ~ 'string'
+WSTRING     ~ 'wstring'
+LBRACKET    ~ '['
+RBRACKET    ~ ']'
+EXCEPTION   ~ 'exception'
+ONEWAY      ~ 'oneway'
+VOID        ~ 'void'
+OUT         ~ 'out'
+INOUT       ~ 'inout'
+RAISES      ~ 'raises'
+CONTEXT     ~ 'context'
+FIXED       ~ 'fixed'
+VALUEBASE   ~ 'ValueBase'
+IMPORT      ~ 'import'
+TYPEID      ~ 'typeid'
+TYPEPREFIX  ~ 'typeprefix'
+READONLY    ~ 'readonly'
+ATTRIBUTE   ~ 'attribute'
+GETRAISES   ~ 'getraises'
+SETRAISES   ~ 'setraises'
+COMPONENT   ~ 'component'
+SUPPORTS    ~ 'supports'
+PROVIDES    ~ 'provides'
+USES        ~ 'uses'
+EMITS       ~ 'emits'
+PUBLISHES   ~ 'publishes'
+CONSUMES    ~ 'consumes'
+HOME        ~ 'home'
+MANAGES     ~ 'manages'
+PRIMARYKEY  ~ 'primarykey'
+FINDER      ~ 'finder'
+EVENTTYPE   ~ 'eventtype'
+LOCAL       ~ 'local'
+CUSTOM      ~ 'custom'
+TRUNCATABLE ~ 'truncatable'
+PUBLIC      ~ 'public'
+PRIVATE     ~ 'private'
+MULTIPLE    ~ 'multiple'
 #
 # Copied from C language
 #
