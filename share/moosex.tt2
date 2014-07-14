@@ -49,10 +49,6 @@ use MooseX::Declare;
   [%~ END ~%]
   [%~ worklist = [ processArg0 ] %]
   [%~ WHILE worklist.size > 0 %]
-    [%~ PERL ~%]
-      # We know what we are doing
-      $Template::Directive::WHILE_MAX = 0;
-    [%~ END ~%]
     [%~ obj = worklist.shift ~%]
     [%~ IF processArg1 ~%]
       [%~ INCLUDE $processArg1 wantedArg0=obj wantedArg1='wanted' ~%]
