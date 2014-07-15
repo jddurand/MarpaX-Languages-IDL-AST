@@ -24,10 +24,11 @@ use MooseX::Declare;
 [% PROCESS _process processArg0=ast processArg1='specification' | $PerlTidy %]
 [%~ END ~%]
 
-[%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
+[%~ # ************************************************************************** ~%]
 [%~ #                       TEMPLATE TOOLKIT TOOLS                               ~%]
-[%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
+[%~ # ************************************************************************** ~%]
 
+[%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
 [%~ #                         LEXEMES OF INTEREST                                ~%]
 [%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
 
@@ -37,19 +38,241 @@ use MooseX::Declare;
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 [%~ END ~%]
 
+[%~ # .......................................................................... ~%]
+
 [%~ BLOCK STRINGLITERALUNIT ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% INCLUDE _lexeme lexemeArg0=array %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 [%~ END ~%]
 
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK IDENTIFIER ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+\$[% INCLUDE _lexeme lexemeArg0=array %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+[%~ END ~%]
+
+[%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
+[%~ #                           RULES OF INTEREST                                ~%]
+[%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
+
 [%~ BLOCK importedScope ~%]
+  [%~ #
+      # <importedScope>              ::= <scopedName>
+      #                              |   <stringLiteral>
+      # ~%]
   [%~ importedScopeValue = INCLUDE _process processArg0=array.0 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 load [% importedScopeValue %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK typeDcl ~%]
+  [%~ #
+      # <typeDcl>                    ::= TYPEDEF <typeDeclarator>
+      #                              |   <structType>
+      #                              |   <unionType>
+      #                              |   <enumType>
+      #                              |   NATIVE <simpleDeclarator>
+      #                              |   <constrForwardDecl>
+      # ~%]
+  [%~ SWITCH ScalarUtil.blessed(array.0).split('::').last ~%]
+    [%~ CASE 'TYPEDEF' ~%]
+      [%~ typeDeclarator = INCLUDE _process processArg0=array.1 ~%]
+      [%~ processSubtree = 0 ~%]
+    [%~ CASE 'NATIVE' ~%]
+      [%~ PROCESS _process processArg0=array.1 ~%]
+      [%~ processSubtree = 0 ~%]
+  [%~ END ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                             baseTypeSpec                                   ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK floatingPtType ~%]      [%#~%]floatingPtType[%#~%]      [%~ processSubtree = 0; END ~%]
+[%~ BLOCK signedShortInt ~%]      [%#~%]signedShortInt[%#~%]      [%~ processSubtree = 0; END ~%]
+[%~ BLOCK signedLongInt ~%]       [%#~%]signedLongInt[%#~%]       [%~ processSubtree = 0; END ~%]
+[%~ BLOCK signedLonglongInt ~%]   [%#~%]signedLonglongInt[%#~%]   [%~ processSubtree = 0; END ~%]
+[%~ BLOCK unsignedShortInt ~%]    [%#~%]unsignedShortInt[%#~%]    [%~ processSubtree = 0; END ~%]
+[%~ BLOCK unsignedLongInt ~%]     [%#~%]unsignedLongInt[%#~%]     [%~ processSubtree = 0; END ~%]
+[%~ BLOCK unsignedLonglongInt ~%] [%#~%]unsignedLonglongInt[%#~%] [%~ processSubtree = 0; END ~%]
+[%~ BLOCK charType ~%]            [%#~%]charType[%#~%]            [%~ processSubtree = 0; END ~%]
+[%~ BLOCK wideCharType ~%]        [%#~%]wideCharType[%#~%]        [%~ processSubtree = 0; END ~%]
+[%~ BLOCK booleanType ~%]         [%#~%]booleanType[%#~%]         [%~ processSubtree = 0; END ~%]
+[%~ BLOCK octetType ~%]           [%#~%]octetType[%#~%]           [%~ processSubtree = 0; END ~%]
+[%~ BLOCK anyType ~%]             [%#~%]anyType[%#~%]             [%~ processSubtree = 0; END ~%]
+[%~ BLOCK objectType ~%]          [%#~%]objectType[%#~%]          [%~ processSubtree = 0; END ~%]
+[%~ BLOCK valueBaseType ~%]       [%#~%]valueBaseType[%#~%]       [%~ processSubtree = 0; END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                             templateTypeSpec                               ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK sequenceType ~%]
+  [%~ #
+      # <sequenceType>               ::= SEQUENCE LT <simpleTypeSpec> COMMA <positiveIntConst> GT
+      #                              | SEQUENCE LT <simpleTypeSpec> GT
+      # ~%]
+  [%~ simpleTypeSpec = INCLUDE _process processArg0=array.2 ~%]
+  [%~ IF array.size == 6 ~%]
+    [%~ positiveIntConst = INCLUDE _process processArg0=array.4 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+subtype({as => ArrayRef[[% simpleTypeSpec %]], where => sub {scalar(@_) <= [% positiveIntConst %]}})
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ ELSE ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+subtype({as => ArrayRef[[% simpleTypeSpec %]]})
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK wideStringType ~%]
+  [%~ #
+      # <wideStringType>             ::= WSTRING LT <positiveIntConst> GT
+      #                              | WSTRING
+      # ~%]
+  [%~ IF array.size == 4 ~%]
+    [%~ positiveIntConst = INCLUDE _process processArg0=array.2 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+subtype({as => ArrayRef[wideCharType], where => sub {scalar(@_) <= [% positiveIntConst %]}})
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ ELSE ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+subtype({as => ArrayRef[wideCharType]})
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK stringType ~%]
+  [%~ #
+      # <stringType>                 ::= STRING LT <positiveIntConst> GT
+      #                              | STRING
+      # ~%]
+  [%~ IF array.size == 4 ~%]
+    [%~ positiveIntConst = INCLUDE _process processArg0=array.2 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+subtype({as => ArrayRef[charType], where => sub {scalar(@_) <= [% positiveIntConst %]}})
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ ELSE ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+subtype({as => ArrayRef[charType]})
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK fixedPtType ~%]
+  [%~ #
+      # <fixedPtType>                ::= FIXED LT <positiveIntConst> COMMA <positiveIntConst> GT
+      # ~%]
+  [%~ positiveIntConst1 = INCLUDE _process processArg0=array.2 ~%]
+  [%~ positiveIntConst2 = INCLUDE _process processArg0=array.4 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+subtype({as => Match::BigFloat, via => sub {my $x = Math::BigFloat->new(\$_); $x->precision([% positiveIntConst2 %]); $x->accuracy([% positiveIntConst2 %]); $x}})
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                             constrTypeSpec                               ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK structType ~%]
+  [%~ #
+      # <structType>                 ::= STRUCT <identifier> LCURLY <memberList> RCURLY
+      # ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.1 ~%]
+  [%~ memberList = INCLUDE _process processArg0=array.3 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% PERL %]
+print STDERR "==> " . $stash->get('identifier') . "\n";
+[% END %]
+[% identifier %] = subtype({as => Dict[[% memberList %]]})
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK unionType ~%]
+  [%~ #
+      # <unionType>                  ::= UNION <identifier> SWITCH LPAREN <switchTypeSpec> RPAREN LCURLY <switchBody> RCURLY
+      # ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.1 ~%]
+  [%~ switchTypeSpec = INCLUDE _process processArg0=array.4 ~%]
+  [%~ switchBody = INCLUDE _process processArg0=array.7 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% identifier %] = subtype({as => [% switchTypeSpec %], where => sub {[% switchBody %]}})
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK enumType ~%]
+  [%~ #
+      # <enumType>                   ::= ENUM <identifier> LCURLY <enumeratorListMany> RCURLY
+      # ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.1 ~%]
+  [%~ enumeratorListMany = INCLUDE _process processArg0=array.3 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% identifier %] = union([qw/[% enumeratorListMany %]/])
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                             declaratorListMany                             ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK declaratorListMany ~%]
+  [%~ #
+      # <declaratorListMany> ::= <declarator>+ separator => <comma>
+      # ~%]
+  [%~ declaratorListMany = [] ~%]
+  [%~ FOREACH rhs IN array ~%]
+    [%~ declarator = INCLUDE _process processArg0=rhs ~%]
+    [%~ declaratorListMany.unshift(declarator) ~%]
+  [%~ END ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% declaratorListMany.join(', ') %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                              arrayDeclarator                               ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK arrayDeclarator ~%]
+  [%~ #
+      # <arrayDeclarator>            ::= <identifier> <fixedArraySizeMany>
+      # ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.0 ~%]
+  [%~ fixedArraySizeMany = INCLUDE _process processArg0=array.1 ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% identifier %][[% fixedArraySizeMany %]]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
+[%~ #                                  TOOLS                                     ~%]
+[%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
 
 [%~ BLOCK _lexeme ~%]
   [%~ # ######################################################################## ~%]
@@ -59,6 +282,8 @@ load [% importedScopeValue %];
   [%~ # ######################################################################## ~%]
 [% lexemeArg0.2 %]
 [%~ END ~%]
+
+[%~ # .......................................................................... ~%]
 
 [%~ BLOCK _process ~%]
   [%~ # ######################################################################## ~%]
@@ -88,7 +313,8 @@ load [% importedScopeValue %];
   [%~ # explicitely the _process again, and end with setting processSubtree to a ~%]
   [%~ # true value.                                                              ~%]
   [%~ #                                                                          ~%]
-  [%~ # To perform localisation, in a PROCESS'ed block you will use INCLUDE      ~%]
+  [%~ # To perform localisation, in a PROCESS'ed block you will use INCLUDE.     ~%]
+  [%~ # To perform variable settings in the same context, you will use PROCESS.  ~%]
   [%~ #                                                                          ~%]
   [%~ # ######################################################################## ~%]
   [%~ IF (! processArg0) ~%]
@@ -98,33 +324,43 @@ load [% importedScopeValue %];
     [%~ THROW processArg1 "Missing argument" ~%]
   [%~ END ~%]
 
-  [%~ worklist = [ processArg0 ] %]
-  [%~ WHILE worklist.size > 0 %]
-    [%~ obj = worklist.shift ~%]
+  [%~ processWorklist = [ processArg0 ] %]
+  [%~ WHILE processWorklist.size > 0 %]
+    [%~ processObj = processWorklist.shift ~%]
     [%~ TRY ~%]
-      [%~ blessed = ScalarUtil.blessed(obj) ~%]
-      [%~ shortBlessedName = blessed.split('::').last ~%]
+      [%~ processBlessed = ScalarUtil.blessed(processObj) ~%]
+      [%~ processShortBlessedName = processBlessed.split('::').last ~%]
     [%~ CATCH ~%]
-      [%~ blessed = '' ~%]
-      [%~ shortBlessedName = '' ~%]
+      [%~ processBlessed = '' ~%]
+      [%~ processShortBlessedName = '' ~%]
     [%~ END ~%]
-    [%~ IF shortBlessedName ~%]
-      [%~ obj2array = [] ~%]
+    [%~ IF processShortBlessedName ~%]
+      [%~ processObj2array = [] ~%]
       [%~ PERL ~%]
         [%~ # ------------------------------------------------------------------------ ~%]
         [%~ # TT2 does not like blessed arrays, we provide our PERL function to get'em ~%]
         [%~ # ------------------------------------------------------------------------ ~%]
         # Store RHS list in variable 'array'
-        my $arrayp = $stash->get('obj');
-        $stash->set('obj2array', [ @{$arrayp} ]);
+        my $arrayp = $stash->get('processObj');
+        $stash->set('processObj2array', [ @{$arrayp} ]);
       [%~ END ~%]
       [%~ processSubtree = 1 ~%]
       [%~ TRY ~%]
   [%~ PERL ~%]
-print STDERR "Trying PROCESS " . $stash->get('shortBlessedName') . "\n";
+print STDERR "Trying PROCESS " . $stash->get('processShortBlessedName') . "\n";
   [%~ END ~%]
-        [%~ PROCESS $shortBlessedName array=obj2array ~%]
+        [%~ PROCESS $processShortBlessedName array=processObj2array ~%]
       [%~ CATCH ~%]
+        [% PERL %]
+          # We want to send that to STDERR immediately if it is something else but 'file error'
+          # We are smart enough to tell in which BLOCK it failed -;
+          my $type = $stash->get([ 'error', [ 'type' ]]);
+          my $processShortBlessedName = $stash->get('processShortBlessedName');
+          if (! ($type =~ /^file error/)) {
+            my $info = $stash->get([ 'error', [ 'info' ]]);
+            print STDERR "Error when processing $processShortBlessedName! Type: $type, Info: $info\n";
+          }
+        [%~ END ~%]
         [%~ CLEAR ~%]
       [%~ END ~%]
       [%~ PERL ~%]
@@ -134,20 +370,20 @@ print STDERR "Trying PROCESS " . $stash->get('shortBlessedName') . "\n";
           [%~ # ------------------------------------------------------------------------ ~%]
           [%~ # I believe this is quicker to do the unshift myself, true ?               ~%]
           [%~ # ------------------------------------------------------------------------ ~%]
-          my $arrayp = $stash->get('obj2array');
-          my $worklist = $stash->get('worklist');
-          # Unshift array into worklist
-          unshift(@{$worklist}, @{$arrayp});
-          $stash->set('worklist', $worklist);
+          my $arrayp = $stash->get('processObj2array');
+          my $processWorklist = $stash->get('processWorklist');
+          # Unshift array into processWorklist
+          unshift(@{$processWorklist}, @{$arrayp});
+          $stash->set('processWorklist', $processWorklist);
         [%~ END ~%]
       [%~ ELSE ~%]
         [%~ PERL ~%]
-print STDERR "Process stop on " . $stash->get('shortBlessedName') . "\n";
+print STDERR "Process stop on " . $stash->get('processShortBlessedName') . "\n";
         [%~ END ~%]
       [%~ END ~%]
     [%~ END ~%]
     [%~ TRY ~%]
-      [%~ refType = ScalarUtil.reftype(obj) ~%]
+      [%~ refType = ScalarUtil.reftype(processObj) ~%]
     [%~ CATCH ~%]
       [%~ refType = '' ~%]
     [%~ END ~%]
