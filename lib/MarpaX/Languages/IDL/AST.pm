@@ -10,6 +10,7 @@ use Template;
 use Template::Stash;
 use Template::Constants qw/:chomp :debug/;
 use File::ShareDir ':ALL';
+use File::Util qw/SL/;
 use constant {
   LEXEME_INDEX => 0
 };
@@ -200,7 +201,7 @@ Template-Toolkit template name. Default to 'moosex.tt2', available in this distr
 
 =item $targetOptionHashp
 
-Hash reference of options specific to target $target.
+Hash reference of options specific to target $target. A include path of the form templateWithoutExtension is automatically inserted, e.g. if target if $template is moosex.tt2, this will be moosex.
 
 =back
 
@@ -221,6 +222,9 @@ sub generate {
 
     my $ttOptionHashp = $targetOptionHashp->{tt};
     $ttOptionHashp->{INCLUDE_PATH} //= module_dir(__PACKAGE__);
+    my ($filename, $directories, $suffix) = fileparse($template, qr/\.[^.]*/);
+    $ttOptionHashp->{INCLUDE_PATH} .= SL . File::Spec->catdir($directories, $filename);
+    print STDERR "==> " . $ttOptionHashp->{INCLUDE_PATH} . "\n";
     $ttOptionHashp->{INTERPOLATE} //= 1;
     $ttOptionHashp->{EVAL_PERL} //= 1;
     $ttOptionHashp->{PRE_CHOMP} //= CHOMP_NONE;
