@@ -7,19 +7,9 @@ use MarpaX::Languages::IDL::AST::Util;
 use Scalar::Util qw/blessed reftype refaddr/;
 use Data::Dumper;
 use Template;
-use Template::Stash;
 use Template::Constants qw/:chomp :debug/;
 use File::ShareDir ':ALL';
 use Config;
-use constant {
-  LEXEME_INDEX => 0
-};
-
-use constant {
-  LEXEME_INDEX_START => 0,
-  LEXEME_INDEX_LENGTH => 1,
-  LEXEME_INDEX_VALUE => 2
-};
 
 # ABSTRACT: Translate an IDL source to an AST
 
@@ -201,7 +191,7 @@ Template-Toolkit template name. Default to 'moosex.tt2', available in this distr
 
 =item $targetOptionHashp
 
-Hash reference of options specific to target $target. A include path of the form templateWithoutExtension is automatically inserted, e.g. if target if $template is moosex.tt2, this will be moosex.
+Hash reference of options specific to target $target.
 
 =back
 
@@ -220,18 +210,16 @@ sub generate {
 	croak '3rd argument must be a pointer to HASH';
     }
 
+    my $moduleDir = module_dir(__PACKAGE__);
     my $ttOptionHashp = $targetOptionHashp->{tt};
-    $ttOptionHashp->{INCLUDE_PATH} //= module_dir(__PACKAGE__);
-    print STDERR "==> " . $ttOptionHashp->{INCLUDE_PATH} . "\n";
-    my ($filename, $directories, $suffix) = fileparse($template, qr/\.[^.]*/);
-    $ttOptionHashp->{INCLUDE_PATH} .= $Config{path_sep} . File::Spec->catdir(rel2abs($directories, module_dir(__PACKAGE__)), $filename);
-    print STDERR "==> " . $Config{path_sep} . ", " . $ttOptionHashp->{INCLUDE_PATH} . "\n";
+    $ttOptionHashp->{STRICT} //= 1;
+    $ttOptionHashp->{DELIMITER} //= $Config{path_sep};
+    $ttOptionHashp->{INCLUDE_PATH} //= '';
+    $ttOptionHashp->{INCLUDE_PATH} .= $ttOptionHashp->{DELIMITER} . $moduleDir;
     $ttOptionHashp->{INTERPOLATE} //= 1;
     $ttOptionHashp->{EVAL_PERL} //= 1;
     $ttOptionHashp->{PRE_CHOMP} //= CHOMP_NONE;
     $ttOptionHashp->{POST_CHOMP} //= CHOMP_NONE;
-    $ttOptionHashp->{WHILE_MAX} //= 10;
-    $ttOptionHashp->{ABSOLUTE} //= 1;
     $ttOptionHashp->{RELATIVE} //= 1;
     local $Template::Directive::WHILE_MAX = 1000000000;
     my $tt = Template->new($ttOptionHashp) || croak "$Template::ERROR";
@@ -266,32 +254,6 @@ sub generate {
     $ttVarsHashp->{nl}     //= sub {return "\n" x (shift // 0); };
     $ttVarsHashp->{tab}    //= sub {return "\t" x (shift // 0); };
     $ttVarsHashp->{sp}     //= sub {return ' ' x (shift // 0); };
-    $ttVarsHashp->{lexeme} //= sub {
-	my $item = shift || [];
-	my $ref = ref($item);
-	if ($ref eq 'ARRAY') {
-	    return $item->[2];
-	} elsif (! $ref) {
-	    return $item;
-	} else {
-	    croak "lexeme callback called on something with type $ref";
-	}
-    };
-
-    my $stash = Template::Stash->new();
-  $stash->define_vmethod(
-    scalar => asList => sub {
-        my $arrayp = shift;
-        print STDERR "\$arrayp = $arrayp\n";
-        return \@{$arrayp};
-    }
-  );
-  $stash->define_vmethod(
-    hash => asList => sub { die "Oups; hash ?" }
-  );
-  $stash->define_vmethod(
-    list => asList => sub { die "Oups; list ?" }
-  );
 
     $self->{_output} = '';
     $tt->process($template, $ttVarsHashp, \$self->{_output}) || croak $tt->error();
