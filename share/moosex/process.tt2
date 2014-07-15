@@ -1,0 +1,70 @@
+
+[%~ # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ~%]
+
+[%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
+[%~ #                       TEMPLATE TOOLKIT TOOLS                               ~%]
+[%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
+
+[%~ BLOCK process ~%]
+  [%~ # ######################################################################## ~%]
+  [%~ # Scan the AST using a stack-light model                                   ~%]
+  [%~ #                                                                          ~%]
+  [%~ # Input: processArg0          an AST blessed hash item or lexeme array     ~%]
+  [%~ # Input: processArg1          a wanted blessed name                        ~%]
+  [%~ #                                                                          ~%]
+  [%~ # If match, an INCLUDE of the matched blessed name will be called i.e.:    ~%]
+  [%~ #                             INCLUDE $blessed array                       ~%]
+  [%~ # ######################################################################## ~%]
+  [%~ IF (! processArg0) ~%]
+    [%~ THROW processArg0 "Missing argument" ~%]
+  [%~ END ~%]
+  [%~ IF (! processArg1) ~%]
+    [%~ THROW processArg1 "Missing argument" ~%]
+  [%~ END ~%]
+
+  [%~ worklist = [ processArg0 ] %]
+  [%~ WHILE worklist.size > 0 %]
+    [%~ obj = worklist.shift ~%]
+    [%~ blessed = ScalarUtil.blessed(obj).split('::').last ~%]
+    [%~ obj2arrayDone = 0 ~%]
+    [%~ IF blessed == processArg1 ~%]
+      [%~ obj2array = [] ~%]
+      [%~ PERL ~%]
+        [%~ # ------------------------------------------------------------------------ ~%]
+        [%~ # TT2 does not like blessed arrays, we provide our PERL function to get'em ~%]
+        [%~ # ------------------------------------------------------------------------ ~%]
+        my $arrayp = $stash->get('obj');
+        $stash->set('obj2array', [ @{$arrayp} ]);
+      [%~ END ~%]
+      [%~ INCLUDE $blessed array=obj2array ~%]
+    [%~ END ~%]
+    [%~ refType = ScalarUtil.reftype(obj) ~%]
+    [%~ IF ScalarUtil.blessed(obj) ~%]
+      [%~ obj2array = [] ~%]
+      [%~ PERL ~%]
+        my $worklist = $stash->get('worklist');
+        my $arrayp = $stash->get('obj');
+        unshift(@{$worklist}, @{$arrayp});
+        $stash->set('worklist', $worklist);
+      [%~ END ~%]
+    [%~ ELSIF ! refType ~%]
+      [%~ # This is a lexeme: [ start, length, value ], and we already unshifted 'start' ~%]
+        [% # dummy = worklist.shift %] [% # worklist.shift %]
+    [%~ ELSE ~%]
+      [%~ THROW reftype $obj ~%]
+    [%~ END ~%]
+  [%~ END ~%]
+[%~ END ~%]
+
+[%~ BLOCK specification ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+OK specification <[% array.join('><') %]> END OF OK
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+[%~ INCLUDE process processArg0=array.1 processArg1='IDENTIFIER' ~%]
+[%~ END ~%]
+
+[%~ BLOCK IDENTIFIER ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+OK IDENTIFIER <[% array.join('><') %]> END OF OK
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+[%~ END ~%]
