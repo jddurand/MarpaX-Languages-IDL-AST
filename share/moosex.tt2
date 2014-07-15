@@ -189,7 +189,7 @@ subtype({as => Match::BigFloat, via => sub {my $x = Math::BigFloat->new(\$_); $x
       # <structType>                 ::= STRUCT <identifier> LCURLY <memberList> RCURLY
       # ~%]
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
-  [%~ CALL scope.push(scope.size > 0 ? '::' _ identifier : identifier) ~%]
+  [%~ CALL scope.push('::' _ identifier) ~%]
   [%~ memberList = INCLUDE _process processArg0=array.3 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 my \$[% identifier %] = subtype({as => Dict[[% memberList %]]})
@@ -209,8 +209,9 @@ my \$[% identifier %] = subtype({as => Dict[[% memberList %]]})
   [%~ abstractOrLocalMaybe = INCLUDE _process processArg0=array.0 | trim ~%]
   [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
   [%~ interfaceInheritanceSpecMaybe = INCLUDE _process processArg0=array.3 | trim ~%]
+  [%~ fullName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim %]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-role [% identifier %] with([% interfaceInheritanceSpecMaybe %])
+role [% fullName %] with([% interfaceInheritanceSpecMaybe %])
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
@@ -226,7 +227,7 @@ role [% identifier %] with([% interfaceInheritanceSpecMaybe %])
   [%~ interfaceHeader = INCLUDE _process processArg0=array.0 | trim ~%]
   [%~ # the name is what is after identifier keyword ~%]
   [%~ identifier = interfaceHeader.match('\brole\s+([^\s]+)').0 ~%]
-  [%~ CALL scope.push(scope.size > 0 ? '::' _ identifier : identifier) ~%]
+  [%~ CALL scope.push('::' _ identifier) ~%]
   [%~ interfaceBody = INCLUDE _process processArg0=array.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% interfaceHeader %] {
@@ -247,7 +248,7 @@ role [% identifier %] with([% interfaceInheritanceSpecMaybe %])
       # ~%]
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ switchTypeSpec = INCLUDE _process processArg0=array.4 | trim ~%]
-  [%~ CALL scope.push(scope.size > 0 ? '::' _ identifier : identifier) ~%]
+  [%~ CALL scope.push('::' _ identifier) ~%]
   [%~ switchBody = INCLUDE _process processArg0=array.7 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 my \$[% identifier %] = subtype({as => [% switchTypeSpec %], where => sub {[% switchBody %]}})
@@ -316,10 +317,11 @@ my \$[% identifier %] = subtype({as => [% switchTypeSpec %], where => sub {[% sw
       # <module>                     ::= MODULE <identifier> LCURLY <definitionMany> RCURLY
       # ~%]
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
-  [%~ CALL root.push(scope.size > 0 ? '::' _ identifier : identifier) ~%]
+  [%~ fullName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim %]
+  [%~ CALL root.push('::' _ identifier) ~%]
   [%~ definitionMany = INCLUDE _process processArg0=array.3 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-class [% identifier %] {
+class [% fullName %] {
 [% definitionMany %]
 };
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -356,7 +358,7 @@ my \$[% declarator %] = subtype({as => [% typeSpec %]})
   [%~ constType = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
   [%~ constExp = INCLUDE _process processArg0=array.4 | trim ~%]
-  [%~ fullName = root.join('') _ '::' _ scope.join('') _ identifier %]
+  [%~ fullName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim %]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 class [% fullName %] {
   use MooseX::ClassAttribute;
@@ -508,3 +510,23 @@ our \$[% identifier %] = [% fullName %]->value;
 
 [%~ END ~%]
 
+[%~ BLOCK _fullQualifiedScopedName %]
+  [%~ # ######################################################################## ~%]
+  [%~ # Returns a full qualified scoped name                                     ~%]
+  [%~ #                                                                          ~%]
+  [%~ # Input: fullQualifiedScopedNameArg0          a scoped name                ~%]
+  [%~ #                                                                          ~%]
+  [%~ # This block is used in cases where we want to force a fully qualified     ~%]
+  [%~ # name. This is happening everytime we reference a class or a role.        ~%]
+  [%~ #                                                                          ~%]
+  [%~ # In any case, we remove the eventual leading '::' to allow relative       ~%]
+  [%~ # namespace use.                                                           ~%]
+  [%~ #                                                                          ~%]
+  [%~ # ######################################################################## ~%]
+  [%~ IF ! fullQualifiedScopedNameArg0.match('::') ~%]
+    [% fullQualifiedScopedNameArg0 = root.join('') _ '::' _ scope.join('') _ fullQualifiedScopedNameArg0 %]
+  [%~ END ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% fullQualifiedScopedNameArg0.replace('^::', '') %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+[%~ END ~%]
