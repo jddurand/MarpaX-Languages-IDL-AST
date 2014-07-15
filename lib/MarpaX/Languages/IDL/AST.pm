@@ -10,7 +10,7 @@ use Template;
 use Template::Stash;
 use Template::Constants qw/:chomp :debug/;
 use File::ShareDir ':ALL';
-use File::Util qw/SL/;
+use Config;
 use constant {
   LEXEME_INDEX => 0
 };
@@ -41,7 +41,7 @@ This module provide and manage an AST of an IDL file, as per OMG's IDL 3.5 gramm
 use Carp qw/carp croak/;
 use Marpa::R2 qw//;
 use File::Basename qw/basename fileparse/;
-use File::Spec::Functions qw/case_tolerant/;
+use File::Spec::Functions qw/case_tolerant rel2abs/;
 use File::Slurp qw/read_file/;
 
 our $BLESS_PACKAGE = 'IDL::AST';
@@ -222,14 +222,17 @@ sub generate {
 
     my $ttOptionHashp = $targetOptionHashp->{tt};
     $ttOptionHashp->{INCLUDE_PATH} //= module_dir(__PACKAGE__);
-    my ($filename, $directories, $suffix) = fileparse($template, qr/\.[^.]*/);
-    $ttOptionHashp->{INCLUDE_PATH} .= SL . File::Spec->catdir($directories, $filename);
     print STDERR "==> " . $ttOptionHashp->{INCLUDE_PATH} . "\n";
+    my ($filename, $directories, $suffix) = fileparse($template, qr/\.[^.]*/);
+    $ttOptionHashp->{INCLUDE_PATH} .= $Config{path_sep} . File::Spec->catdir(rel2abs($directories, module_dir(__PACKAGE__)), $filename);
+    print STDERR "==> " . $Config{path_sep} . ", " . $ttOptionHashp->{INCLUDE_PATH} . "\n";
     $ttOptionHashp->{INTERPOLATE} //= 1;
     $ttOptionHashp->{EVAL_PERL} //= 1;
     $ttOptionHashp->{PRE_CHOMP} //= CHOMP_NONE;
     $ttOptionHashp->{POST_CHOMP} //= CHOMP_NONE;
     $ttOptionHashp->{WHILE_MAX} //= 10;
+    $ttOptionHashp->{ABSOLUTE} //= 1;
+    $ttOptionHashp->{RELATIVE} //= 1;
     local $Template::Directive::WHILE_MAX = 1000000000;
     my $tt = Template->new($ttOptionHashp) || croak "$Template::ERROR";
 
