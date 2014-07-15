@@ -16,12 +16,17 @@
 [%~ USE ScalarUtil ~%]
 [%~ USE PerlTidy ~%]
 [%~ FILTER $PerlTidy ~%]
+[%~ # Internal variables ~%]
+[%~ root = [] ~%]
+[%~ scope = [] ~%]
 #!env perl
 
 use Module::Load qw/load/;
 use MooseX::Declare;
 
-[% PROCESS _process processArg0=ast processArg1='specification' | $PerlTidy %]
+[% PROCESS _process processArg0=ast
+            processArg1='specification'
+            | $PerlTidy %]
 [%~ END ~%]
 
 [%~ # ************************************************************************** ~%]
@@ -32,96 +37,78 @@ use MooseX::Declare;
 [%~ #                         LEXEMES OF INTEREST                                ~%]
 [%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
 
-[%~ BLOCK scopedName ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-\$[% INCLUDE _lexeme lexemeArg0=array %]
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-[%~ END ~%]
+[%~ # ..................   Variable Lexemes .................................... ~%]
 
-[%~ # .......................................................................... ~%]
+[%~ BLOCK "scopedName"            ~%][%#~%]\$[% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
+[%~ BLOCK "IDENTIFIER"            ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
+[%~ BLOCK "STRINGLITERALUNIT"     ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
+[%~ BLOCK "WIDESTRINGLITERALUNIT" ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
+[%~ BLOCK "CHARACTERLITERAL"      ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
+[%~ BLOCK "WIDECHARACTERLITERAL"  ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
+[%~ BLOCK "ICONSTANT"             ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
 
-[%~ BLOCK STRINGLITERALUNIT ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% INCLUDE _lexeme lexemeArg0=array %]
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-[%~ END ~%]
+[%~ # ..................   Constant Lexemes .................................... ~%]
 
-[%~ # .......................................................................... ~%]
-
-[%~ BLOCK IDENTIFIER ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-\$[% INCLUDE _lexeme lexemeArg0=array %]
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-[%~ END ~%]
+[%~ BLOCK "OR"        ~%][%#~%]|[%#~%] [%~ END ~%]
+[%~ BLOCK "XOR"       ~%][%#~%]^[%#~%] [%~ END ~%]
+[%~ BLOCK "AND"       ~%][%#~%]&[%#~%] [%~ END ~%]
+[%~ BLOCK "RSHIFT"    ~%][%#~%]>>[%#~%][%~ END ~%]
+[%~ BLOCK "LSHIFT"    ~%][%#~%]<<[%#~%][%~ END ~%]
+[%~ BLOCK "PLUS"      ~%][%#~%]+[%#~%] [%~ END ~%]
+[%~ BLOCK "MINUS"     ~%][%#~%]-[%#~%] [%~ END ~%]
+[%~ BLOCK "MUL"       ~%][%#~%]*[%#~%] [%~ END ~%]
+[%~ BLOCK "DIV"       ~%][%#~%]/[%#~%] [%~ END ~%]
+[%~ BLOCK "MOD"       ~%][%#~%]%[%#~%] [%~ END ~%]
+[%~ BLOCK "TILDE"     ~%][%#~%]~[%#~%] [%~ END ~%]
+[%~ BLOCK "SEMICOLON" ~%][%#~%];[%#~%] [%~ END ~%]
 
 [%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
 [%~ #                           RULES OF INTEREST                                ~%]
 [%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
 
-[%~ BLOCK importedScope ~%]
+[%~ BLOCK "importedScope" ~%]
   [%~ #
       # <importedScope>              ::= <scopedName>
       #                              |   <stringLiteral>
       # ~%]
-  [%~ importedScopeValue = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ importedScope = INCLUDE _process processArg0=array.0 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-load [% importedScopeValue %];
+load [% importedScope %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-  [%~ processSubtree = 0 ~%]
-[%~ END ~%]
-
-[%~ # .......................................................................... ~%]
-
-[%~ BLOCK typeDcl ~%]
-  [%~ #
-      # <typeDcl>                    ::= TYPEDEF <typeDeclarator>
-      #                              |   <structType>
-      #                              |   <unionType>
-      #                              |   <enumType>
-      #                              |   NATIVE <simpleDeclarator>
-      #                              |   <constrForwardDecl>
-      # ~%]
-  [%~ SWITCH ScalarUtil.blessed(array.0).split('::').last ~%]
-    [%~ CASE 'TYPEDEF' ~%]
-      [%~ typeDeclarator = INCLUDE _process processArg0=array.1 ~%]
-      [%~ processSubtree = 0 ~%]
-    [%~ CASE 'NATIVE' ~%]
-      [%~ PROCESS _process processArg0=array.1 ~%]
-      [%~ processSubtree = 0 ~%]
-  [%~ END ~%]
+  [%~ processSubtree = 0 %]
 [%~ END ~%]
 
 [%~ # .......................................................................... ~%]
 [%~ #                             baseTypeSpec                                   ~%]
 [%~ # .......................................................................... ~%]
 
-[%~ BLOCK floatingPtType ~%]      [%#~%]floatingPtType[%#~%]      [%~ processSubtree = 0; END ~%]
-[%~ BLOCK signedShortInt ~%]      [%#~%]signedShortInt[%#~%]      [%~ processSubtree = 0; END ~%]
-[%~ BLOCK signedLongInt ~%]       [%#~%]signedLongInt[%#~%]       [%~ processSubtree = 0; END ~%]
-[%~ BLOCK signedLonglongInt ~%]   [%#~%]signedLonglongInt[%#~%]   [%~ processSubtree = 0; END ~%]
-[%~ BLOCK unsignedShortInt ~%]    [%#~%]unsignedShortInt[%#~%]    [%~ processSubtree = 0; END ~%]
-[%~ BLOCK unsignedLongInt ~%]     [%#~%]unsignedLongInt[%#~%]     [%~ processSubtree = 0; END ~%]
-[%~ BLOCK unsignedLonglongInt ~%] [%#~%]unsignedLonglongInt[%#~%] [%~ processSubtree = 0; END ~%]
-[%~ BLOCK charType ~%]            [%#~%]charType[%#~%]            [%~ processSubtree = 0; END ~%]
-[%~ BLOCK wideCharType ~%]        [%#~%]wideCharType[%#~%]        [%~ processSubtree = 0; END ~%]
-[%~ BLOCK booleanType ~%]         [%#~%]booleanType[%#~%]         [%~ processSubtree = 0; END ~%]
-[%~ BLOCK octetType ~%]           [%#~%]octetType[%#~%]           [%~ processSubtree = 0; END ~%]
-[%~ BLOCK anyType ~%]             [%#~%]anyType[%#~%]             [%~ processSubtree = 0; END ~%]
-[%~ BLOCK objectType ~%]          [%#~%]objectType[%#~%]          [%~ processSubtree = 0; END ~%]
-[%~ BLOCK valueBaseType ~%]       [%#~%]valueBaseType[%#~%]       [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "floatingPtType" ~%]      [%#~%]floatingPtType[%#~%]      [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "signedShortInt" ~%]      [%#~%]signedShortInt[%#~%]      [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "signedLongInt" ~%]       [%#~%]signedLongInt[%#~%]       [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "signedLonglongInt" ~%]   [%#~%]signedLonglongInt[%#~%]   [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "unsignedShortInt" ~%]    [%#~%]unsignedShortInt[%#~%]    [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "unsignedLongInt" ~%]     [%#~%]unsignedLongInt[%#~%]     [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "unsignedLonglongInt" ~%] [%#~%]unsignedLonglongInt[%#~%] [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "charType" ~%]            [%#~%]charType[%#~%]            [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "wideCharType" ~%]        [%#~%]wideCharType[%#~%]        [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "booleanType" ~%]         [%#~%]booleanType[%#~%]         [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "octetType" ~%]           [%#~%]octetType[%#~%]           [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "anyType" ~%]             [%#~%]anyType[%#~%]             [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "objectType" ~%]          [%#~%]objectType[%#~%]          [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "valueBaseType" ~%]       [%#~%]valueBaseType[%#~%]       [%~ processSubtree = 0; END ~%]
 
 [%~ # .......................................................................... ~%]
 [%~ #                             templateTypeSpec                               ~%]
 [%~ # .......................................................................... ~%]
 
-[%~ BLOCK sequenceType ~%]
+[%~ BLOCK "sequenceType" ~%]
   [%~ #
       # <sequenceType>               ::= SEQUENCE LT <simpleTypeSpec> COMMA <positiveIntConst> GT
       #                              | SEQUENCE LT <simpleTypeSpec> GT
       # ~%]
-  [%~ simpleTypeSpec = INCLUDE _process processArg0=array.2 ~%]
+  [%~ simpleTypeSpec = INCLUDE _process processArg0=array.2 | trim ~%]
   [%~ IF array.size == 6 ~%]
-    [%~ positiveIntConst = INCLUDE _process processArg0=array.4 ~%]
+    [%~ positiveIntConst = INCLUDE _process processArg0=array.4 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 subtype({as => ArrayRef[[% simpleTypeSpec %]], where => sub {scalar(@_) <= [% positiveIntConst %]}})
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -134,14 +121,16 @@ subtype({as => ArrayRef[[% simpleTypeSpec %]]})
 [%~ END ~%]
 
 [%~ # .......................................................................... ~%]
+[%~ #                               wideStringType                               ~%]
+[%~ # .......................................................................... ~%]
 
-[%~ BLOCK wideStringType ~%]
+[%~ BLOCK "wideStringType" ~%]
   [%~ #
       # <wideStringType>             ::= WSTRING LT <positiveIntConst> GT
       #                              | WSTRING
       # ~%]
   [%~ IF array.size == 4 ~%]
-    [%~ positiveIntConst = INCLUDE _process processArg0=array.2 ~%]
+    [%~ positiveIntConst = INCLUDE _process processArg0=array.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 subtype({as => ArrayRef[wideCharType], where => sub {scalar(@_) <= [% positiveIntConst %]}})
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -154,14 +143,16 @@ subtype({as => ArrayRef[wideCharType]})
 [%~ END ~%]
 
 [%~ # .......................................................................... ~%]
+[%~ #                                 stringType                                 ~%]
+[%~ # .......................................................................... ~%]
 
-[%~ BLOCK stringType ~%]
+[%~ BLOCK "stringType" ~%]
   [%~ #
       # <stringType>                 ::= STRING LT <positiveIntConst> GT
       #                              | STRING
       # ~%]
   [%~ IF array.size == 4 ~%]
-    [%~ positiveIntConst = INCLUDE _process processArg0=array.2 ~%]
+    [%~ positiveIntConst = INCLUDE _process processArg0=array.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 subtype({as => ArrayRef[charType], where => sub {scalar(@_) <= [% positiveIntConst %]}})
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -174,13 +165,15 @@ subtype({as => ArrayRef[charType]})
 [%~ END ~%]
 
 [%~ # .......................................................................... ~%]
+[%~ #                                fixedPtType                                 ~%]
+[%~ # .......................................................................... ~%]
 
-[%~ BLOCK fixedPtType ~%]
+[%~ BLOCK "fixedPtType" ~%]
   [%~ #
       # <fixedPtType>                ::= FIXED LT <positiveIntConst> COMMA <positiveIntConst> GT
       # ~%]
-  [%~ positiveIntConst1 = INCLUDE _process processArg0=array.2 ~%]
-  [%~ positiveIntConst2 = INCLUDE _process processArg0=array.4 ~%]
+  [%~ positiveIntConst1 = INCLUDE _process processArg0=array.2 | trim ~%]
+  [%~ positiveIntConst2 = INCLUDE _process processArg0=array.4 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 subtype({as => Match::BigFloat, via => sub {my $x = Math::BigFloat->new(\$_); $x->precision([% positiveIntConst2 %]); $x->accuracy([% positiveIntConst2 %]); $x}})
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -188,47 +181,91 @@ subtype({as => Match::BigFloat, via => sub {my $x = Math::BigFloat->new(\$_); $x
 [%~ END ~%]
 
 [%~ # .......................................................................... ~%]
-[%~ #                             constrTypeSpec                               ~%]
+[%~ #                                structType                                  ~%]
 [%~ # .......................................................................... ~%]
 
-[%~ BLOCK structType ~%]
+[%~ BLOCK "structType" ~%]
   [%~ #
       # <structType>                 ::= STRUCT <identifier> LCURLY <memberList> RCURLY
       # ~%]
-  [%~ identifier = INCLUDE _process processArg0=array.1 ~%]
-  [%~ memberList = INCLUDE _process processArg0=array.3 ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ CALL scope.push(scope.size > 0 ? '::' _ identifier : identifier) ~%]
+  [%~ memberList = INCLUDE _process processArg0=array.3 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% PERL %]
-print STDERR "==> " . $stash->get('identifier') . "\n";
-[% END %]
-[% identifier %] = subtype({as => Dict[[% memberList %]]})
+my \$[% identifier %] = subtype({as => Dict[[% memberList %]]})
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ CALL scope.pop ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                             interfaceHeader                                ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "interfaceHeader" ~%]
+  [%~ #
+      # <interfaceHeader>            ::= <abstractOrLocalMaybe> INTERFACE <identifieridentifier> <interfaceInheritanceSpecMaybe>
+      # ~%]
+  [%~ abstractOrLocalMaybe = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
+  [%~ interfaceInheritanceSpecMaybe = INCLUDE _process processArg0=array.3 | trim ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+role [% identifier %] with([% interfaceInheritanceSpecMaybe %])
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
 [%~ # .......................................................................... ~%]
+[%~ #                               interfaceDcl                                 ~%]
+[%~ # .......................................................................... ~%]
 
-[%~ BLOCK unionType ~%]
+[%~ BLOCK "interfaceDcl" ~%]
+  [%~ #
+      # <interfaceDcl>               ::= <interfaceHeader> LCURLY <interfaceBody> RCURLY
+      # ~%]
+  [%~ interfaceHeader = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ # the name is what is after identifier keyword ~%]
+  [%~ identifier = interfaceHeader.match('\brole\s+([^\s]+)').0 ~%]
+  [%~ CALL scope.push(scope.size > 0 ? '::' _ identifier : identifier) ~%]
+  [%~ interfaceBody = INCLUDE _process processArg0=array.2 | trim ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% interfaceHeader %] {
+  [% interfaceBody %]
+}
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ CALL scope.pop ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                 unionType                                  ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "unionType" ~%]
   [%~ #
       # <unionType>                  ::= UNION <identifier> SWITCH LPAREN <switchTypeSpec> RPAREN LCURLY <switchBody> RCURLY
       # ~%]
-  [%~ identifier = INCLUDE _process processArg0=array.1 ~%]
-  [%~ switchTypeSpec = INCLUDE _process processArg0=array.4 ~%]
-  [%~ switchBody = INCLUDE _process processArg0=array.7 ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ switchTypeSpec = INCLUDE _process processArg0=array.4 | trim ~%]
+  [%~ CALL scope.push(scope.size > 0 ? '::' _ identifier : identifier) ~%]
+  [%~ switchBody = INCLUDE _process processArg0=array.7 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% identifier %] = subtype({as => [% switchTypeSpec %], where => sub {[% switchBody %]}})
+my \$[% identifier %] = subtype({as => [% switchTypeSpec %], where => sub {[% switchBody %]}})
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ CALL scope.pop ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
 [%~ # .......................................................................... ~%]
+[%~ #                                  enumType                                  ~%]
+[%~ # .......................................................................... ~%]
 
-[%~ BLOCK enumType ~%]
+[%~ BLOCK "enumType" ~%]
   [%~ #
       # <enumType>                   ::= ENUM <identifier> LCURLY <enumeratorListMany> RCURLY
       # ~%]
-  [%~ identifier = INCLUDE _process processArg0=array.1 ~%]
-  [%~ enumeratorListMany = INCLUDE _process processArg0=array.3 ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ enumeratorListMany = INCLUDE _process processArg0=array.3 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% identifier %] = union([qw/[% enumeratorListMany %]/])
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -239,17 +276,17 @@ print STDERR "==> " . $stash->get('identifier') . "\n";
 [%~ #                             declaratorListMany                             ~%]
 [%~ # .......................................................................... ~%]
 
-[%~ BLOCK declaratorListMany ~%]
+[%~ BLOCK "declaratorListMany" ~%]
   [%~ #
       # <declaratorListMany> ::= <declarator>+ separator => <comma>
       # ~%]
   [%~ declaratorListMany = [] ~%]
   [%~ FOREACH rhs IN array ~%]
-    [%~ declarator = INCLUDE _process processArg0=rhs ~%]
+    [%~ declarator = INCLUDE _process processArg0=rhs | trim ~%]
     [%~ declaratorListMany.unshift(declarator) ~%]
   [%~ END ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% declaratorListMany.join(', ') %]
+[% declaratorListMany.join(',') %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
@@ -258,14 +295,100 @@ print STDERR "==> " . $stash->get('identifier') . "\n";
 [%~ #                              arrayDeclarator                               ~%]
 [%~ # .......................................................................... ~%]
 
-[%~ BLOCK arrayDeclarator ~%]
+[%~ BLOCK "arrayDeclarator" ~%]
   [%~ #
       # <arrayDeclarator>            ::= <identifier> <fixedArraySizeMany>
       # ~%]
-  [%~ identifier = INCLUDE _process processArg0=array.0 ~%]
-  [%~ fixedArraySizeMany = INCLUDE _process processArg0=array.1 ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ fixedArraySizeMany = INCLUDE _process processArg0=array.1 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% identifier %][[% fixedArraySizeMany %]]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                  module                                    ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "module" ~%]
+  [%~ #
+      # <module>                     ::= MODULE <identifier> LCURLY <definitionMany> RCURLY
+      # ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ CALL root.push(scope.size > 0 ? '::' _ identifier : identifier) ~%]
+  [%~ definitionMany = INCLUDE _process processArg0=array.3 | trim ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+class [% identifier %] {
+[% definitionMany %]
+};
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ CALL root.pop ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                              typeDeclarator                                ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "typeDeclarator" ~%]
+  [%~ #
+      # <typeDeclarator>             ::= <typeSpec> <declarators>
+      # ~%]
+  [%~ typeSpec = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ declarators = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ FOREACH declarator IN declarators.split(',') ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+my \$[% declarator %] = subtype({as => [% typeSpec %]})
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                 constDcl                                   ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "constDcl" ~%]
+  [%~ #
+      # <constDcl>                   ::= CONST <constType> <identifier> EQUAL <constExp>
+      # ~%]
+  [%~ constType = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
+  [%~ constExp = INCLUDE _process processArg0=array.4 | trim ~%]
+  [%~ fullName = root.join('') _ '::' _ scope.join('') _ identifier %]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+class [% fullName %] {
+  use MooseX::ClassAttribute;
+  class_has value => (is => 'ro', isa => [% constType %], default => do {[% constExp %]});
+};
+use [% fullName %];
+our \$[% identifier %] = [% fullName %]->value;
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                definition                                  ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "definition" ~%]
+  [%~ #
+      # <definition>                 ::= <typeDcl> SEMICOLON
+      #                              |   <constDcl> SEMICOLON
+      #                              |   <exceptDcl> SEMICOLON
+      #                              |   <interface> SEMICOLON
+      #                              |   <module> SEMICOLON
+      #                              |   <value> SEMICOLON
+      #                              |   <typeIdDcl> SEMICOLON
+      #                              |   <typePrefixDcl> SEMICOLON
+      #                              |   <event> SEMICOLON
+      #                              |   <component> SEMICOLON
+      #                              |   <homeDcl> SEMICOLON
+      # ~%]
+  [%~ xxxDcl = INCLUDE _process processArg0=array.0 | trim ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% xxxDcl %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
@@ -274,7 +397,7 @@ print STDERR "==> " . $stash->get('identifier') . "\n";
 [%~ #                                  TOOLS                                     ~%]
 [%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
 
-[%~ BLOCK _lexeme ~%]
+[%~ BLOCK "_lexeme" ~%]
   [%~ # ######################################################################## ~%]
   [%~ # Outputs a lexeme value                                                   ~%]
   [%~ #                                                                          ~%]
@@ -285,7 +408,7 @@ print STDERR "==> " . $stash->get('identifier') . "\n";
 
 [%~ # .......................................................................... ~%]
 
-[%~ BLOCK _process ~%]
+[%~ BLOCK "_process" ~%]
   [%~ # ######################################################################## ~%]
   [%~ # Scan the AST using a stack-light model                                   ~%]
   [%~ #                                                                          ~%]
@@ -346,14 +469,12 @@ print STDERR "==> " . $stash->get('identifier') . "\n";
       [%~ END ~%]
       [%~ processSubtree = 1 ~%]
       [%~ TRY ~%]
-  [%~ PERL ~%]
-print STDERR "Trying PROCESS " . $stash->get('processShortBlessedName') . "\n";
-  [%~ END ~%]
         [%~ PROCESS $processShortBlessedName array=processObj2array ~%]
       [%~ CATCH ~%]
         [% PERL %]
           # We want to send that to STDERR immediately if it is something else but 'file error'
           # We are smart enough to tell in which BLOCK it failed -;
+          # We are not smart enought to redo a Template-like exception
           my $type = $stash->get([ 'error', [ 'type' ]]);
           my $processShortBlessedName = $stash->get('processShortBlessedName');
           if (! ($type =~ /^file error/)) {
@@ -376,10 +497,6 @@ print STDERR "Trying PROCESS " . $stash->get('processShortBlessedName') . "\n";
           unshift(@{$processWorklist}, @{$arrayp});
           $stash->set('processWorklist', $processWorklist);
         [%~ END ~%]
-      [%~ ELSE ~%]
-        [%~ PERL ~%]
-print STDERR "Process stop on " . $stash->get('processShortBlessedName') . "\n";
-        [%~ END ~%]
       [%~ END ~%]
     [%~ END ~%]
     [%~ TRY ~%]
@@ -388,5 +505,6 @@ print STDERR "Process stop on " . $stash->get('processShortBlessedName') . "\n";
       [%~ refType = '' ~%]
     [%~ END ~%]
   [%~ END ~%]
+
 [%~ END ~%]
 

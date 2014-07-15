@@ -8,7 +8,7 @@ module M {
 interface A {
   struct S {
     struct T {
-      ArgType x[I];       // ArgType and I introduced
+      ArgType x[I], JDD;       // ArgType and I introduced
       long y;             // a new y is defined, the existing Y is not used
     } m;
   };
