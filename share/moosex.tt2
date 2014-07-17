@@ -110,11 +110,11 @@ load [% importedScope %]
   [%~ IF array.size == 6 ~%]
     [%~ positiveIntConst = INCLUDE _process processArg0=array.4 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-as ArrayRef[[% simpleTypeSpec %]], where => {scalar(@_) <= [% positiveIntConst %]}
+ArrayRef[[% simpleTypeSpec %]], where => {scalar(@_) <= [% positiveIntConst %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ ELSE ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-as ArrayRef[[% simpleTypeSpec %]]
+ArrayRef[[% simpleTypeSpec %]]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
   [%~ processSubtree = 0 ~%]
@@ -132,11 +132,11 @@ as ArrayRef[[% simpleTypeSpec %]]
   [%~ IF array.size == 4 ~%]
     [%~ positiveIntConst = INCLUDE _process processArg0=array.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-as ArrayRef[wideCharType], where => {scalar(@_) <= [% positiveIntConst %]}
+ArrayRef[wideCharType], where => {scalar(@_) <= [% positiveIntConst %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ ELSE ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-as ArrayRef[wideCharType]
+ArrayRef[wideCharType]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
   [%~ processSubtree = 0 ~%]
@@ -154,11 +154,11 @@ as ArrayRef[wideCharType]
   [%~ IF array.size == 4 ~%]
     [%~ positiveIntConst = INCLUDE _process processArg0=array.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-as ArrayRef[charType], where => {scalar(@_) <= [% positiveIntConst %]}
+ArrayRef[charType], where => {scalar(@_) <= [% positiveIntConst %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ ELSE ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-as ArrayRef[charType]
+ArrayRef[charType]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
   [%~ processSubtree = 0 ~%]
@@ -175,7 +175,7 @@ as ArrayRef[charType]
   [%~ positiveIntConst1 = INCLUDE _process processArg0=array.2 | trim ~%]
   [%~ positiveIntConst2 = INCLUDE _process processArg0=array.4 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-as Match::BigFloat, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiveIntConst2 %]); $x->accuracy([% positiveIntConst2 %]); $x}
+Match::BigFloat, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiveIntConst2 %]); $x->accuracy([% positiveIntConst2 %]); $x}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
@@ -273,7 +273,7 @@ role [% fullName %] with ([% interfaceInheritanceSpecMaybe %])
   [%~ switchBody = INCLUDE _process processArg0=array.7 | trim ~%]
   [%~ dummy = PROCESS addSubtypeToCurrentScope addSubtypeToCurrentScopeArg0=identifier ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype [% identifier %], [% switchTypeSpec %], where {[% switchBody %]};
+subtype [% identifier %], as [% switchTypeSpec %], where {[% switchBody %]};
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ CALL scope.pop ~%]
   [%~ processSubtree = 0 ~%]
@@ -374,7 +374,7 @@ role [% fullName %] {
   [%~ FOREACH declarator IN declarators.split(',') ~%]
     [%~ dummy = PROCESS addSubtypeToCurrentScope addSubtypeToCurrentScopeArg0=declarator ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype [% declarator %], [% typeSpec %];
+subtype [% declarator %], as [% typeSpec %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
   [%~ processSubtree = 0 ~%]
@@ -392,7 +392,7 @@ subtype [% declarator %], [% typeSpec %];
   [%~ typeSpec = INCLUDE _process processArg0=array.2 | trim ~%]
   [%~ dummy = PROCESS addSubtypeToCurrentScope addSubtypeToCurrentScopeArg0=identifier ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype [% identifier %], [% typeSpec %];
+subtype [% identifier %], as [% typeSpec %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
