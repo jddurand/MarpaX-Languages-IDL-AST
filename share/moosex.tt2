@@ -21,11 +21,11 @@
 [%~ scope = [] ~%]
 #!env perl
 
-use Module::Load qw/load/;
 use MooseX::Declare;
 
 [% PROCESS _process processArg0=ast
             processArg1='specification'
+            subtypesPerScope={}
             | $PerlTidy %]
 [%~ END ~%]
 
@@ -39,7 +39,7 @@ use MooseX::Declare;
 
 [%~ # ..................   Variable Lexemes .................................... ~%]
 
-[%~ BLOCK "scopedName"            ~%][%#~%]\$[% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
+[%~ BLOCK "scopedName"            ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
 [%~ BLOCK "IDENTIFIER"            ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
 [%~ BLOCK "STRINGLITERALUNIT"     ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
 [%~ BLOCK "WIDESTRINGLITERALUNIT" ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
@@ -110,11 +110,11 @@ load [% importedScope %]
   [%~ IF array.size == 6 ~%]
     [%~ positiveIntConst = INCLUDE _process processArg0=array.4 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype({as => ArrayRef[[% simpleTypeSpec %]], where => sub {scalar(@_) <= [% positiveIntConst %]}})
+as ArrayRef[[% simpleTypeSpec %]], where => {scalar(@_) <= [% positiveIntConst %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ ELSE ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype({as => ArrayRef[[% simpleTypeSpec %]]})
+as ArrayRef[[% simpleTypeSpec %]]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
   [%~ processSubtree = 0 ~%]
@@ -132,11 +132,11 @@ subtype({as => ArrayRef[[% simpleTypeSpec %]]})
   [%~ IF array.size == 4 ~%]
     [%~ positiveIntConst = INCLUDE _process processArg0=array.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype({as => ArrayRef[wideCharType], where => sub {scalar(@_) <= [% positiveIntConst %]}})
+as ArrayRef[wideCharType], where => {scalar(@_) <= [% positiveIntConst %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ ELSE ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype({as => ArrayRef[wideCharType]})
+as ArrayRef[wideCharType]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
   [%~ processSubtree = 0 ~%]
@@ -154,11 +154,11 @@ subtype({as => ArrayRef[wideCharType]})
   [%~ IF array.size == 4 ~%]
     [%~ positiveIntConst = INCLUDE _process processArg0=array.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype({as => ArrayRef[charType], where => sub {scalar(@_) <= [% positiveIntConst %]}})
+as ArrayRef[charType], where => {scalar(@_) <= [% positiveIntConst %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ ELSE ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype({as => ArrayRef[charType]})
+as ArrayRef[charType]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
   [%~ processSubtree = 0 ~%]
@@ -175,7 +175,7 @@ subtype({as => ArrayRef[charType]})
   [%~ positiveIntConst1 = INCLUDE _process processArg0=array.2 | trim ~%]
   [%~ positiveIntConst2 = INCLUDE _process processArg0=array.4 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype({as => Match::BigFloat, via => sub {my $x = Math::BigFloat->new(\$_); $x->precision([% positiveIntConst2 %]); $x->accuracy([% positiveIntConst2 %]); $x}})
+as Match::BigFloat, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiveIntConst2 %]); $x->accuracy([% positiveIntConst2 %]); $x}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
@@ -191,10 +191,28 @@ subtype({as => Match::BigFloat, via => sub {my $x = Math::BigFloat->new(\$_); $x
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ CALL scope.push('::' _ identifier) ~%]
   [%~ memberList = INCLUDE _process processArg0=array.3 | trim ~%]
+  [%~ dummy = PROCESS addSubtypeToCurrentScope addSubtypeToCurrentScopeArg0=identifier ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-my \$[% identifier %] = subtype({as => Dict[[% memberList %]]})
+subtype [% identifier %], as Dict[[% memberList %]];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ CALL scope.pop ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                forwardDcl                                  ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "forwardDcl" ~%]
+  [%~ #
+      # <forwardDcl>                 ::= <abstractOrLocalMaybe> INTERFACE <identifier>
+      # ~%]
+  [%~ abstractOrLocalMaybe = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
+  [%~ fullName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim %]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+role [% fullName %] {};
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
@@ -204,14 +222,14 @@ my \$[% identifier %] = subtype({as => Dict[[% memberList %]]})
 
 [%~ BLOCK "interfaceHeader" ~%]
   [%~ #
-      # <interfaceHeader>            ::= <abstractOrLocalMaybe> INTERFACE <identifieridentifier> <interfaceInheritanceSpecMaybe>
+      # <interfaceHeader>            ::= <abstractOrLocalMaybe> INTERFACE <identifier> <interfaceInheritanceSpecMaybe>
       # ~%]
   [%~ abstractOrLocalMaybe = INCLUDE _process processArg0=array.0 | trim ~%]
   [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
   [%~ interfaceInheritanceSpecMaybe = INCLUDE _process processArg0=array.3 | trim ~%]
   [%~ fullName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim %]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-role [% fullName %] with([% interfaceInheritanceSpecMaybe %])
+role [% fullName %] with ([% interfaceInheritanceSpecMaybe %])
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
@@ -245,13 +263,17 @@ role [% fullName %] with([% interfaceInheritanceSpecMaybe %])
 [%~ BLOCK "unionType" ~%]
   [%~ #
       # <unionType>                  ::= UNION <identifier> SWITCH LPAREN <switchTypeSpec> RPAREN LCURLY <switchBody> RCURLY
+      #
+      # Note: per def <switchTypeSpec> is not a composite thing
+      #
       # ~%]
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ switchTypeSpec = INCLUDE _process processArg0=array.4 | trim ~%]
   [%~ CALL scope.push('::' _ identifier) ~%]
   [%~ switchBody = INCLUDE _process processArg0=array.7 | trim ~%]
+  [%~ dummy = PROCESS addSubtypeToCurrentScope addSubtypeToCurrentScopeArg0=identifier ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-my \$[% identifier %] = subtype({as => [% switchTypeSpec %], where => sub {[% switchBody %]}})
+subtype [% identifier %], [% switchTypeSpec %], where {[% switchBody %]};
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ CALL scope.pop ~%]
   [%~ processSubtree = 0 ~%]
@@ -319,11 +341,21 @@ my \$[% identifier %] = subtype({as => [% switchTypeSpec %], where => sub {[% sw
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ fullName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim %]
   [%~ CALL root.push('::' _ identifier) ~%]
+  [%~ currentFullyQualifiedScopedName = INCLUDE _currentFullyQualifiedScopedName | trim ~%]
+  [%~ subtypesPerScope.currentFullyQualifiedScopedName = {} ~%]
   [%~ definitionMany = INCLUDE _process processArg0=array.3 | trim ~%]
+  [%~ IF (subtypesPerScope.currentFullyQualifiedScopedName.keys.size > 0) ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-class [% fullName %] {
-[% definitionMany %]
+role [% fullName %] {
+  use MooseX::Types -declare => [qw/[% subtypesPerScope.currentFullyQualifiedScopedName.keys.join(' ') %]/];
+
+  [% definitionMany %]
 };
+  [%~ ELSE ~%]
+role [% fullName %] {
+  [% definitionMany %]
+};
+  [%~ END ~%]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ CALL root.pop ~%]
   [%~ processSubtree = 0 ~%]
@@ -340,8 +372,62 @@ class [% fullName %] {
   [%~ typeSpec = INCLUDE _process processArg0=array.0 | trim ~%]
   [%~ declarators = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ FOREACH declarator IN declarators.split(',') ~%]
+    [%~ dummy = PROCESS addSubtypeToCurrentScope addSubtypeToCurrentScopeArg0=declarator ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-my \$[% declarator %] = subtype({as => [% typeSpec %]})
+subtype [% declarator %], [% typeSpec %];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                valueBoxDcl                                 ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "valueBoxDcl" ~%]
+  [%~ #
+      # <valueBoxDcl>                ::= VALUETYPE <identifier> <typeSpec>
+      # ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ typeSpec = INCLUDE _process processArg0=array.2 | trim ~%]
+  [%~ dummy = PROCESS addSubtypeToCurrentScope addSubtypeToCurrentScopeArg0=identifier ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+subtype [% identifier %], [% typeSpec %];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                 exceptDcl                                  ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "exceptDcl" ~%]
+  [%~ #
+      # <exceptDcl>                  ::= EXCEPTION <identifier> LCURLY <memberAny> RCURLY
+      # ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ memberAny = INCLUDE _process processArg0=array.3 | trim ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+role [% identifier %] with (Throwable) {
+  [% memberAny %]
+}
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                  member                                    ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "member" ~%]
+  [%~ #
+      # <member>                     ::= <typeSpec> <declarators> SEMICOLON
+      # ~%]
+  [%~ typeSpec = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ declarators = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ FOREACH declarator IN declarators.split(',') ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+has '[% declarator %]' => (as => [% typeSpec %]);
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
   [%~ processSubtree = 0 ~%]
@@ -529,4 +615,36 @@ our \$[% identifier %] = [% fullName %]->value;
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% fullQualifiedScopedNameArg0.replace('^::', '') %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+[%~ END ~%]
+
+[%~ BLOCK _currentFullyQualifiedScopedName ~%]
+  [%~ # ######################################################################## ~%]
+  [%~ # Returns the current fully qualified scoped name                          ~%]
+  [%~ #                                                                          ~%]
+  [%~ # Input: N/A                                                               ~%]
+  [%~ #                                                                          ~%]
+  [%~ # This block is used in cases where we want to remember information        ~%]
+  [%~ # per fully qualified scoped name.                                         ~%]
+  [%~ #                                                                          ~%]
+  [%~ # Use case: the list of injected type constraints.                         ~%]
+  [%~ #                                                                          ~%]
+  [%~ # ######################################################################## ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0='' %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+[%~ END ~%]
+
+[%~ BLOCK addSubtypeToCurrentScope ~%]
+  [%~ # ######################################################################## ~%]
+  [%~ # Add a subtype declaration into current scope                             ~%]
+  [%~ #                                                                          ~%]
+  [%~ # Input: addSubtypeToCurrentScopeArg0          an identifier               ~%]
+  [%~ #                                                                          ~%]
+  [%~ # This block is used in cases where we want to remember subtypes per scope ~%]
+  [%~ #                                                                          ~%]
+  [%~ # Use case: MooseX::Types -declare => [qw/.../]                            ~%]
+  [%~ #                                                                          ~%]
+  [%~ # ######################################################################## ~%]
+  [%~ currentFullyQualifiedScopedName = INCLUDE _currentFullyQualifiedScopedName | trim ~%]
+  [%~ subtypesPerScope.currentFullyQualifiedScopedName.$addSubtypeToCurrentScopeArg0 = 1 ~%]
 [%~ END ~%]
