@@ -230,30 +230,10 @@ sub generate {
     #
     my $ttVarsHashp = $targetOptionHashp->{vars};
     #
-    # Data::Dumper explicit support
-    #
-    $ttVarsHashp->{Dumper} //= sub { print STDERR Dumper(shift); };
-    #
-    # Scalar::Utils explicit support
-    #
-    $ttVarsHashp->{blessed} //= sub {return blessed(shift) || ''; };
-    $ttVarsHashp->{reftype} //= sub {return reftype(shift) || ''; };
-    $ttVarsHashp->{refaddr} //= sub {return refaddr(shift) || 0; };
-    #
-    # TT2 does not like blessed arrays
-    #
-    $ttVarsHashp->{as_list} //= sub {
-	my $arrayp = shift;
-	return [ @{$arrayp} ];
-    };
-    #
-    # General hooks
+    # Our hooks
     #
     $ttVarsHashp->{ast} //= $ast;
-    $ttVarsHashp->{cr}     //= sub {return "\r" x (shift // 0); };
-    $ttVarsHashp->{nl}     //= sub {return "\n" x (shift // 0); };
-    $ttVarsHashp->{tab}    //= sub {return "\t" x (shift // 0); };
-    $ttVarsHashp->{sp}     //= sub {return ' ' x (shift // 0); };
+    $ttVarsHashp->{nativeFloat} = $targetOptionHashp->{nativeFloat} // 1;
 
     $self->{_output} = '';
     $tt->process($template, $ttVarsHashp, \$self->{_output}) || croak $tt->error();
