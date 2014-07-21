@@ -59,6 +59,7 @@ use Modern::Perl;
 [%~ BLOCK "CHARACTERLITERAL"      ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
 [%~ BLOCK "WIDECHARACTERLITERAL"  ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
 [%~ BLOCK "ICONSTANT"             ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
+[%~ BLOCK "CPPSTYLEDIRECTIVE"     ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
 
 [%~ # ..................   Constant Lexemes .................................... ~%]
 
@@ -648,6 +649,38 @@ around '[% identifier %]' => sub {
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% identifier %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                          supportedCppCommand                               ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "supportedCppCommand" ~%]
+  [%~ #
+      # <supportedCppCommand>        ::= CPPSTYLEDIRECTIVE
+      # ~%]
+  [%~ supportedCppCommand = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ IF (matches = supportedCppCommand.match('#[\s]*include[\s]+"([^"]+)"')) ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+use [% matches.0.replace('\.idl', '') %];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ ELSIF (matches = supportedCppCommand.match('#[\s]*pragma[\s]+prefix[\s]+"([^"]+)"')) ~%]
+    [%~ CALL root.push(matches.0.replace('\.', '::')) ~%]
+  [%~ END ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                               pragmaPrefix                                 ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "pragmaPrefix" ~%]
+  [%~ #
+      # <pragmaPrefix>               ::= PRAGMA PREFIX <stringLiteral>
+      # ~%]
+  [%~ stringLiteral = INCLUDE _process processArg0=array.2 | trim ~%]
+  [%~ CALL root.push(stringLiteral.replace('"', '')) ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
