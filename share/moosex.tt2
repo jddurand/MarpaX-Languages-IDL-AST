@@ -76,6 +76,7 @@ use Modern::Perl;
 [%~ BLOCK "SEMICOLON" ~%][%#~%];[%#~%] [%~ END ~%]
 [%~ BLOCK "TRUE"      ~%][%#~%]1[%#~%] [%~ END ~%]
 [%~ BLOCK "FALSE"     ~%][%#~%]0[%#~%] [%~ END ~%]
+[%~ BLOCK "VOID"      ~%][%#~%]void[%#~%] [%~ END ~%]
 
 [%~ # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ~%]
 [%~ #                           RULES OF INTEREST                                ~%]
@@ -582,14 +583,36 @@ has '[% attr %]' => (is => 'rw', isa => "[% paramTypeSpec %]");
   [%~ # contextExprMaybe = INCLUDE _process processArg0=array.5 | trim ~%]
   [%~ PROCESS _addMoosexParamsValidateToCurrentScope ~%]
   [%~ parameters = [] ~%]
+  [%~ paramTypeSpec = [] ~%]
   [%~ FOREACH parameter IN parameterDcls.split(',') ~%]
     [%~ parameters.push('$' _ parameter.split(' ').last) ~%]
+    [%~ paramTypeSpec.push(parameter.split(' ').first) ~%]
   [%~ END ~%] 
+  [%~ IF (parameters.size > 0) ~%]
+    [%~ pos_validated_list = 'my (' _ parameters.join(',') _ ') = pos_validated_list(\\@_, ' ~%]
+    [%~ FOREACH parameter IN parameters ~%]
+      [%~ index = loop.index() ~%]
+      [%~ IF (index > 0) ~%]
+        [%~ pos_validated_list = pos_validated_list _ ',' ~%]
+      [%~ END ~%]
+      [%~ pos_validated_list = pos_validated_list _ '{does => ' _ paramTypeSpec.$index _ '}' ~%]
+    [%~ END ~%]
+    [%~ pos_validated_list = pos_validated_list _ ');' ~%]
+  [%~ ELSE ~%]
+    [%~ pos_validated_list = '' ~%]
+  [%~ END ~%]
+  [%~ IF (opTypeSpec != 'void') ~%]
+     [%~ rc_validated_list = 'my ($rc) = pos_validated_list([ $self->$orig(' _ parameters.join(',') _ ') ], {does => ' _ opTypeSpec _ '});' ~%]
+  [%~ ELSE ~%]
+     [%~ rc_validated_list = 'my $rc = $self->$orig(' _ parameters.join(',') _ ');' ~%]
+  [%~ END ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 requires '[% identifier %]';
 around '[% identifier %]' => sub {
-  my (\$orig, \$self, [% parameters.join(',') %]) = @_;
-  my \$rc = \$self->\$orig([% parameters.join(',') %]);
+  my \$orig = shift;
+  my \$self = shift;
+  [% pos_validated_list %]
+  [% rc_validated_list %]
   return \$rc;
 };
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
@@ -907,7 +930,7 @@ package [% roleArg0 %] {
     [%~ usePerScope.$roleArg0.unshift('Moose::Util::TypeConstraints') ~%]
   [%~ END ~%]
   [%~ IF (moosexParamsValidatePerScope.$roleArg0 != 0) ~%]
-    [%~ usePerScope.$roleArg0.unshift('MooseX::Params::Validate') ~%]
+    [%~ usePerScope.$roleArg0.unshift('MooseX::Params::Validate qw/pos_validated_list/') ~%]
   [%~ END ~%]
   [%~ IF (moosexTypesStructuredPerScope.$roleArg0.keys.size > 0) ~%]
     [%~ usePerScope.$roleArg0.unshift("MooseX::Types::Structured [qw/\n" _ moosexTypesStructuredPerScope.$roleArg0.keys.sort.join("\n") _ "\n/]") ~%]
@@ -969,14 +992,14 @@ with [% withPerScope.$roleArg0.sort.join(', ') %];
     [%~ subTtypesPerScope.$fullname = {} ~%]
     [%~ mooseUtilTypeConstraintsPerScope.$fullname = 0 ~%]
     [%~ moosexTypesStructuredPerScope.$fullname = {} ~%]
-    [%~ moosexParamsValidatePerScope.$fullname = {} ~%]
+    [%~ moosexParamsValidatePerScope.$fullname = 0 ~%]
     [%~ withPerScope.$fullname = [] ~%]
     [%~ usePerScope.$fullname = []  ~%]
   [%~ ELSE ~%]
     [%~ subTtypesPerScope.$fullname = {} ~%]
     [%~ mooseUtilTypeConstraintsPerScope.$fullname = 0 ~%]
     [%~ moosexTypesStructuredPerScope.$fullname = {} ~%]
-    [%~ moosexParamsValidatePerScope.$fullname = {} ~%]
+    [%~ moosexParamsValidatePerScope.$fullname = 0 ~%]
     [%~ withPerScope.$fullname = [] # The with ordering can be important ~%]
     [%~ usePerScope.$fullname = ['MarpaX::Languages::IDL::AST::MooseX::_BaseTypes qw/:all/',
                                  'MRO::Compat'] ~%]
