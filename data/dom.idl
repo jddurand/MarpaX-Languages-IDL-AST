@@ -74,7 +74,6 @@ module dom
   interface Node {
 
     // NodeType
-    const unsigned short      JDD                   = dom::NOT_FOUND_ERR;
     const unsigned short      ELEMENT_NODE                   = 1;
     const unsigned short      ATTRIBUTE_NODE                 = 2;
     const unsigned short      TEXT_NODE                      = 3;
