@@ -526,7 +526,7 @@ has '[% declarator %]' => (as => [% typeSpec %]);
   [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='role_type({role => \'' _ constFullyQualifiedScopedName _ '\'})' ~%]
   [%~ PROCESS _initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='' ~%]
   [%~ PROCESS _addUseToCurrentNamespace useToCurrentScopeArg0='MooseX::ClassAttribute' ~%]
-  [%~ dummy = 'class_has \'' _ identifier _ '\' => (is => \'ro\', isa => ' _ constType _ ', default => do {' _ constExp _ '});' ~%]
+  [%~ dummy = 'class_has \'' _ identifier _ '\' => (is => \'ro\', isa => "' _ constType _ '", default => do {' _ constExp _ '});' ~%]
   [%~ PROCESS _printCurrentRole currentRoleArg0=dummy ~%]
   [%~ PROCESS _closeLastNameSpace lastNamespaceArg0='scope' ~%]
   [%~ processSubtree = 0 ~%]
