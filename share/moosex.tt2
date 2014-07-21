@@ -7,9 +7,11 @@
 [%~ # sp($n)                      Output SP x $n                               ~%]
 [%~ # tab($n)                     Output TAB x $n                              ~%]
 [%~ #                                                                          ~%]
-[%~ # TT2 is great except for the space management which is not easy.          ~%]
-[%~ # My technique is to surround any output by [%#>>>~]...[%#<<<~] and to use ~%]
-[%~ # trim when a block is surrounding another.                                ~%]
+[%~ # Notes:                                                                   ~%]
+[%~ # - raisesExpr on attributes is ignored                                    ~%]
+[%~ # - valuetype is mapped to a role                                          ~%]
+[%~ # - contextExpression in an op is ignored                                  ~%]
+[%~ # - paramAttribute IN/OUT/INOUT is ignored                                 ~%]
 [%~ #                                                                          ~%]
 [%~ #                                                                          ~%]
 [%~ # ######################################################################## ~%]
@@ -20,17 +22,21 @@
 [%~ root = [] ~%]
 [%~ scope = [] ~%]
 #!env perl
-
-use MooseX::Declare;
+use Modern::Perl;
 
 [% PROCESS _process processArg0=ast
             processArg1='specification'
             subTtypesPerScope={}
-            mooseTypesPerScope={}
+            mooseUtilTypeConstraintsPerScope={}
+            moosexParamsValidatePerScope={}
             moosexTypesStructuredPerScope={}
             withPerScope={}
             usePerScope={}
+            namespaceTypePerscope={}
+            scopednamePerscope={}
             | $PerlTidy %]
+
+1;
 [%~ END ~%]
 
 [%~ # ************************************************************************** ~%]
@@ -43,7 +49,10 @@ use MooseX::Declare;
 
 [%~ # ..................   Variable Lexemes .................................... ~%]
 
-[%~ BLOCK "scopedName"            ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
+[%~ # Per def we decide that a scopedName is always prepended with '$'    ~%]
+[%~ # This is always true with one exception: when it refers to a package ~%]
+[%~ # i.e. in the with() section.                                         ~%]
+[%~ BLOCK "scopedName"            ~%][%#~%]\$[% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
 [%~ BLOCK "IDENTIFIER"            ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
 [%~ BLOCK "STRINGLITERALUNIT"     ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
 [%~ BLOCK "WIDESTRINGLITERALUNIT" ~%][%#~%][% PROCESS _lexeme lexemeArg0=array %][%#~%][%~ END ~%]
@@ -88,20 +97,20 @@ load [% importedScope %]
 [%~ #                             baseTypeSpec                                   ~%]
 [%~ # .......................................................................... ~%]
 
-[%~ BLOCK "floatingPtType" ~%]      [%#~%]floatingPtType[%#~%]      [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "signedShortInt" ~%]      [%#~%]signedShortInt[%#~%]      [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "signedLongInt" ~%]       [%#~%]signedLongInt[%#~%]       [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "signedLonglongInt" ~%]   [%#~%]signedLonglongInt[%#~%]   [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "unsignedShortInt" ~%]    [%#~%]unsignedShortInt[%#~%]    [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "unsignedLongInt" ~%]     [%#~%]unsignedLongInt[%#~%]     [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "unsignedLonglongInt" ~%] [%#~%]unsignedLonglongInt[%#~%] [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "charType" ~%]            [%#~%]charType[%#~%]            [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "wideCharType" ~%]        [%#~%]wideCharType[%#~%]        [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "booleanType" ~%]         [%#~%]booleanType[%#~%]         [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "octetType" ~%]           [%#~%]octetType[%#~%]           [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "anyType" ~%]             [%#~%]anyType[%#~%]             [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "objectType" ~%]          [%#~%]objectType[%#~%]          [%~ processSubtree = 0; END ~%]
-[%~ BLOCK "valueBaseType" ~%]       [%#~%]valueBaseType[%#~%]       [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "floatingPtType" ~%]      [%#~%]\$_floatingPtType[%#~%]      [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "signedShortInt" ~%]      [%#~%]\$_signedShortInt[%#~%]      [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "signedLongInt" ~%]       [%#~%]\$_signedLongInt[%#~%]       [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "signedLonglongInt" ~%]   [%#~%]\$_signedLonglongInt[%#~%]   [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "unsignedShortInt" ~%]    [%#~%]\$_unsignedShortInt[%#~%]    [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "unsignedLongInt" ~%]     [%#~%]\$_unsignedLongInt[%#~%]     [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "unsignedLonglongInt" ~%] [%#~%]\$_unsignedLonglongInt[%#~%] [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "charType" ~%]            [%#~%]\$_charType[%#~%]            [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "wideCharType" ~%]        [%#~%]\$_wideCharType[%#~%]        [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "booleanType" ~%]         [%#~%]\$_booleanType[%#~%]         [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "octetType" ~%]           [%#~%]\$_octetType[%#~%]           [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "anyType" ~%]             [%#~%]\$_anyType[%#~%]             [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "objectType" ~%]          [%#~%]\$_objectType[%#~%]          [%~ processSubtree = 0; END ~%]
+[%~ BLOCK "valueBaseType" ~%]       [%#~%]\$_valueBaseType[%#~%]       [%~ processSubtree = 0; END ~%]
 
 [%~ # .......................................................................... ~%]
 [%~ #                             templateTypeSpec                               ~%]
@@ -113,7 +122,7 @@ load [% importedScope %]
       #                              | SEQUENCE LT <simpleTypeSpec> GT
       # ~%]
   [%~ simpleTypeSpec = INCLUDE _process processArg0=array.2 | trim ~%]
-  [%~ PROCESS addMooseTypeToCurrentScope addMooseTypeToCurrentScopeArg0='ArrayRef' ~%]
+  [%~ PROCESS _addMooseUtilTypeConstraintsToCurrentScope ~%]
   [%~ IF array.size == 6 ~%]
     [%~ positiveIntConst = INCLUDE _process processArg0=array.4 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
@@ -198,12 +207,9 @@ floatingPtType, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positive
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ CALL scope.push('::' _ identifier) ~%]
   [%~ memberList = INCLUDE _process processArg0=array.3 | trim ~%]
-  [%~ PROCESS addMoosexTypesStructuredToCurrentScope $addMooseyTypesStructuredToCurrentScopeArg0='Dict' ~%]
-  [%~ PROCESS addSubTypeToCurrentScope addSubTypeToCurrentScopeArg0=identifier ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype [% identifier %], as Dict[[% memberList %]];
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ CALL scope.pop ~%]
+  [%~ PROCESS _addMoosexTypesStructuredToCurrentScope $addMooseyTypesStructuredToCurrentScopeArg0='Dict' ~%]
+  [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='subtype({as => "Dict[' _ memberList _ ']"}' ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
@@ -217,15 +223,14 @@ subtype [% identifier %], as Dict[[% memberList %]];
       # ~%]
   [%~ abstractOrLocalMaybe = INCLUDE _process processArg0=array.0 | trim ~%]
   [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
-  [%~ PROCESS initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='nodefault' ~%]
-  [%~ PROCESS printCurrentRole currentRoleArg0='' ~%]
-  [%~ PROCESS closeLastNameSpace lastNamespaceArg0='scope' ~%]
+  [%~ forwardFullyQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim ~%]
+  [%~ PROCESS _addMooseUtilTypeConstraintsToCurrentScope ~%]
+  [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='role_type({role => \'' _ forwardFullyQualifiedScopedName _ '\'})' ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
 [%~ # .......................................................................... ~%]
 [%~ #                             interfaceHeader                                ~%]
-[%~ # Note: per def we make this block return the identifier                     ~%]
 [%~ # .......................................................................... ~%]
 
 [%~ BLOCK "interfaceHeader" ~%]
@@ -234,30 +239,11 @@ subtype [% identifier %], as Dict[[% memberList %]];
       # ~%]
   [%~ abstractOrLocalMaybe = INCLUDE _process processArg0=array.0 | trim ~%]
   [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
-  [%~ PROCESS initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='' ~%]
+  [%~ interfaceFullyQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim ~%]
+  [%~ PROCESS _addMooseUtilTypeConstraintsToCurrentScope ~%]
+  [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='role_type({role => \'' _ interfaceFullyQualifiedScopedName _ '\'})' ~%]
+  [%~ PROCESS _initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='' ~%]
   [%~ interfaceInheritanceSpecMaybe = INCLUDE _process processArg0=array.3 | trim ~%]
-  [%~ processSubtree = 0 ~%]
-[%~ END ~%]
-
-[%~ # .......................................................................... ~%]
-[%~ #                               interfaceDclJDD                                 ~%]
-[%~ # .......................................................................... ~%]
-
-[%~ BLOCK "interfaceDclJDD" ~%]
-  [%~ #
-      # <interfaceDcl>               ::= <interfaceHeader> LCURLY <interfaceBody> RCURLY
-      # ~%]
-  [%~ interfaceHeader = INCLUDE _process processArg0=array.0 | trim ~%]
-  [%~ # the name is what is after identifier keyword ~%]
-  [%~ identifier = interfaceHeader.match('\brole\s+([^\s]+)').0 ~%]
-  [%~ CALL scope.push('::' _ identifier) ~%]
-  [%~ interfaceBody = INCLUDE _process processArg0=array.2 | trim ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% interfaceHeader %] {
-  [% interfaceBody %]
-}
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-  [%~ CALL scope.pop ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
@@ -270,10 +256,10 @@ subtype [% identifier %], as Dict[[% memberList %]];
       # <interfaceDcl>               ::= <interfaceHeader> LCURLY <interfaceBody> RCURLY
       # ~%]
   [%~ # Take care: it is interfaceHeader that will initialize the namespace ~%]
-  [%~ interfaceHeader = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ INCLUDE _process processArg0=array.0 | trim ~%]
   [%~ interfaceBody = INCLUDE _process processArg0=array.2 | trim ~%]
-  [%~ PROCESS printCurrentRole currentRoleArg0=interfaceBody ~%]
-  [%~ PROCESS closeLastNameSpace lastNamespaceArg0='scope' ~%]
+  [%~ PROCESS _printCurrentRole currentRoleArg0=interfaceBody ~%]
+  [%~ PROCESS _closeLastNameSpace lastNamespaceArg0='scope' ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
@@ -286,7 +272,13 @@ subtype [% identifier %], as Dict[[% memberList %]];
       # <interfaceName>              ::= <scopedName>
       # ~%]
   [%~ scopedName = INCLUDE _process processArg0=array.0 | trim ~%]
-  [%~ dummy = PROCESS addWithToCurrentScope withToCurrentScopeArg0=scopedName ~%]
+  [%~ # This is a special case. We want the with() to be inserted in the new namespace ~%]
+  [%~ # but we want the resolving to be done with the namespace just upper ~%]
+  [%~ # Per def we either in an interface or a valuetype, i.e. in a scope namespace ~%]
+  [%~ lastScopeId = scope.pop ~%]
+  [%~ fullQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=scopedName ~%]
+  [%~ CALL scope.push(lastScopeId) ~%]
+  [%~ PROCESS _addWithToCurrentScope withToCurrentScopeArg0=fullQualifiedScopedName ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
@@ -301,7 +293,7 @@ subtype [% identifier %], as Dict[[% memberList %]];
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ enumeratorListMany = INCLUDE _process processArg0=array.3 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% identifier %] = union([qw/[% enumeratorListMany %]/])
+[% identifier %] = union([qw/[% "\n" _ enumeratorListMany _ "\n" %]/])
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
@@ -326,6 +318,44 @@ subtype [% identifier %], as Dict[[% memberList %]];
 [%~ END ~%]
 
 [%~ # .......................................................................... ~%]
+[%~ #                          simpleDeclaratorListMany                          ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "simpleDeclaratorListMany" ~%]
+  [%~ #
+      # <simpleDeclaratorListMany> ::= <simpleDeclarator>+ separator => <comma>
+      # ~%]
+  [%~ simpleDeclaratorListMany = [] ~%]
+  [%~ FOREACH rhs IN array ~%]
+    [%~ simpleDeclarator = INCLUDE _process processArg0=rhs | trim ~%]
+    [%~ simpleDeclaratorListMany.unshift(simpleDeclarator) ~%]
+  [%~ END ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% simpleDeclaratorListMany.join(',') %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                              paramDclListMany                              ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "paramDclListMany" ~%]
+  [%~ #
+      # <paramDclListMany> ::= <paramDcl>+ separator => <comma>
+      # ~%]
+  [%~ paramDclListMany = [] ~%]
+  [%~ FOREACH rhs IN array ~%]
+    [%~ paramDcl = INCLUDE _process processArg0=rhs | trim ~%]
+    [%~ paramDclListMany.push(paramDcl) ~%]
+  [%~ END ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% paramDclListMany.join(',') %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
 [%~ #                              arrayDeclarator                               ~%]
 [%~ # .......................................................................... ~%]
 
@@ -336,7 +366,7 @@ subtype [% identifier %], as Dict[[% memberList %]];
   [%~ identifier = INCLUDE _process processArg0=array.0 | trim ~%]
   [%~ fixedArraySizeMany = INCLUDE _process processArg0=array.1 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% identifier %][[% fixedArraySizeMany %]]
+\$[% identifier %][[% fixedArraySizeMany %]]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
@@ -350,10 +380,11 @@ subtype [% identifier %], as Dict[[% memberList %]];
       # <module>                     ::= MODULE <identifier> LCURLY <definitionMany> RCURLY
       # ~%]
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
-  [%~ PROCESS initNameSpace namespaceArg0='root' namespaceArg1=identifier namespaceArg2='' ~%]
+  [%~ PROCESS _initNameSpace namespaceArg0='root' namespaceArg1=identifier namespaceArg2='' ~%]
   [%~ definitionMany = INCLUDE _process processArg0=array.3 | trim ~%]
-  [%~ PROCESS printCurrentRole currentRoleArg0=definitionMany ~%]
-  [%~ PROCESS closeLastNameSpace lastNamespaceArg0='root' ~%]
+  [%~ currentFullyQualifiedScopedName = PROCESS _currentFullyQualifiedScopedName | trim ~%]
+  [%~ PROCESS _printCurrentRole currentRoleArg0=definitionMany ~%]
+  [%~ PROCESS _closeLastNameSpace lastNamespaceArg0='root' ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
@@ -368,10 +399,7 @@ subtype [% identifier %], as Dict[[% memberList %]];
   [%~ typeSpec = INCLUDE _process processArg0=array.0 | trim ~%]
   [%~ declarators = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ FOREACH declarator IN declarators.split(',') ~%]
-    [%~ PROCESS addSubTypeToCurrentScope addSubTypeToCurrentScopeArg0=declarator ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype [% declarator %], as [% typeSpec %];
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+    [%~ PROCESS _printScopedname scopednameArg0=declarator scopednameArg1='subtype({as => "' _ typeSpec _ '"})' ~%]
   [%~ END ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
@@ -386,10 +414,59 @@ subtype [% declarator %], as [% typeSpec %];
       # ~%]
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ typeSpec = INCLUDE _process processArg0=array.2 | trim ~%]
-  [%~ PROCESS addSubTypeToCurrentScope addSubTypeToCurrentScopeArg0=identifier ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-subtype [% identifier %], as [% typeSpec %];
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='subtype({as => "' _ typeSpec _ '"})' ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                valueAbsDcl                                 ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "valueAbsDcl" ~%]
+  [%~ #
+      # ABSTRACT VALUETYPE <identifier> <valueInheritanceSpecMaybe> LCURLY <exportAny> RCURLY
+      # ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
+  [%~ valueFullyQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim ~%]
+  [%~ PROCESS _addMooseUtilTypeConstraintsToCurrentScope ~%]
+  [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='role_type({role => \'' _ valueFullyQualifiedScopedName _ '\'})' ~%]
+  [%~ PROCESS _initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='' ~%]
+  [%~ valueInheritanceSpecMaybe = INCLUDE _process processArg0=array.3 | trim ~%]
+  [%~ exportAny = INCLUDE _process processArg0=array.4 | trim ~%]
+  [%~ PROCESS _printCurrentRole currentRoleArg0=exportAny ~%]
+  [%~ PROCESS _closeLastNameSpace lastNamespaceArg0='scope' ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                          supportedInterfaceSpec                            ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "supportedInterfaceSpec" ~%]
+  [%~ #
+      # <supportedInterfaceSpec>     ::= SUPPORTS <scopedNameListMany>
+      # ~%]
+  [%~ scopedNameListMany = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ FOREACH scopedName IN scopedNameListMany.split(',') ~%]
+    [%~ fullQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=scopedName ~%]
+    [%~ PROCESS _addWithToCurrentScope withToCurrentScopeArg0=fullQualifiedScopedName ~%]
+  [%~ END ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                       valueInheritanceSpec1Values                          ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "valueInheritanceSpec1Values" ~%]
+  [%~ #
+      # <valueInheritanceSpec1Values> ::= COLON <truncatableMaybe> <valueNameListMany>
+      # ~%]
+  [%~ valueNameListMany = INCLUDE _process processArg0=array.2 | trim ~%]
+  [%~ FOREACH valueName IN valueNameListMany.split(',') ~%]
+    [%~ fullQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=valueName ~%]
+    [%~ PROCESS _addWithToCurrentScope withToCurrentScopeArg0=fullQualifiedScopedName ~%]
+  [%~ END ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
@@ -402,11 +479,14 @@ subtype [% identifier %], as [% typeSpec %];
       # <exceptDcl>                  ::= EXCEPTION <identifier> LCURLY <memberAny> RCURLY
       # ~%]
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
-  [%~ PROCESS initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='' ~%]
+  [%~ exceptFullyQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim ~%]
+  [%~ PROCESS _addMooseUtilTypeConstraintsToCurrentScope ~%]
+  [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='role_type({role => \'' _ exceptFullyQualifiedScopedName _ '\'})' ~%]
+  [%~ PROCESS _initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='' ~%]
   [%~ memberAny = INCLUDE _process processArg0=array.3 | trim ~%]
-  [%~ PROCESS addWithToCurrentScope withToCurrentScopeArg0='Throwable' ~%]
-  [%~ PROCESS printCurrentRole currentRoleArg0=memberAny ~%]
-  [%~ PROCESS closeLastNameSpace lastNamespaceArg0='scope' ~%]
+  [%~ PROCESS _addWithToCurrentScope withToCurrentScopeArg0='Throwable' ~%]
+  [%~ PROCESS _printCurrentRole currentRoleArg0=memberAny ~%]
+  [%~ PROCESS _closeLastNameSpace lastNamespaceArg0='scope' ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
@@ -439,27 +519,111 @@ has '[% declarator %]' => (as => [% typeSpec %]);
   [%~ constType = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
   [%~ constExp = INCLUDE _process processArg0=array.4 | trim ~%]
-  [%~ PROCESS initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='' ~%]
-  [%~ PROCESS addUseToCurrentNamespace useToCurrentScopeArg0='MooseX::ClassAttribute' ~%]
+  [%~ constFullyQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim ~%]
+  [%~ PROCESS _addMooseUtilTypeConstraintsToCurrentScope ~%]
+  [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='role_type({role => \'' _ constFullyQualifiedScopedName _ '\'})' ~%]
+  [%~ PROCESS _initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='' ~%]
+  [%~ PROCESS _addUseToCurrentNamespace useToCurrentScopeArg0='MooseX::ClassAttribute' ~%]
   [%~ dummy = 'class_has \'' _ identifier _ '\' => (is => \'ro\', isa => ' _ constType _ ', default => do {' _ constExp _ '});' ~%]
-  [%~ PROCESS printCurrentRole currentRoleArg0=dummy ~%]
-  [%~ PROCESS closeLastNameSpace lastNamespaceArg0='scope' ~%]
-  [%~ fullName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim %]
-  [%~ PROCESS addSubTypeToCurrentScope addSubTypeToCurrentScopeArg0=identifier ~%]
+  [%~ PROCESS _printCurrentRole currentRoleArg0=dummy ~%]
+  [%~ PROCESS _closeLastNameSpace lastNamespaceArg0='scope' ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                            readonlyAttrSpec                                ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "readonlyAttrSpec" ~%]
+  [%~ #
+      # <readonlyAttrSpec>           ::= READONLY ATTRIBUTE <paramTypeSpec> <readonlyAttrDeclarator>
+      # ~%]
+  [%~ paramTypeSpec = INCLUDE _process processArg0=array.2 | trim ~%]
+  [%~ readonlyAttrDeclarator = INCLUDE _process processArg0=array.3 | trim ~%]
+  [%~ FOREACH attr IN readonlyAttrDeclarator.split(',') ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-role_type '[% identifier %]', { role => '[% fullName %]'};
-with '[% identifier %]';
+has '[% attr %]' => (is => 'ro', isa => "[% paramTypeSpec %]");
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                attrSpec                                    ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "attrSpec" ~%]
+  [%~ #
+      # <attrSpec>                   ::= ATTRIBUTE <paramTypeSpec> <attrDeclarator>
+      # ~%]
+  [%~ paramTypeSpec = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ attrDeclarator = INCLUDE _process processArg0=array.2 | trim ~%]
+  [%~ FOREACH attr IN attrDeclarator.split(',') ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+has '[% attr %]' => (is => 'rw', isa => "[% paramTypeSpec %]");
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                  opDcl                                     ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "opDcl" ~%]
+  [%~ #
+      # <opDcl>                      ::= <opAttributeMaybe> <opTypeSpec> <identifier> <parameterDcls> <raisesExprMaybe> <contextExprMaybe>
+      # ~%]
+  [%~ opAttributeMaybe = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ opTypeSpec = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
+  [%~ parameterDcls = INCLUDE _process processArg0=array.3 | trim ~%]
+  [%~ # raisesExprMaybe = INCLUDE _process processArg0=array.4 | trim ~%]
+  [%~ # contextExprMaybe = INCLUDE _process processArg0=array.5 | trim ~%]
+  [%~ PROCESS _addMoosexParamsValidateToCurrentScope ~%]
+  [%~ parameters = [] ~%]
+  [%~ FOREACH parameter IN parameterDcls.split(',') ~%]
+    [%~ parameters.push('$' _ parameter.split(' ').last) ~%]
+  [%~ END ~%] 
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+requires '[% identifier %]';
+around '[% identifier %]' => sub {
+  my (\$orig, \$self, [% parameters.join(',') %]) = @_;
+  my \$rc = \$self->\$orig([% parameters.join(',') %]);
+  return \$rc;
+};
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
-  [%~ RETURN ~%]
+[%~ END ~%]
 
+[%~ # .......................................................................... ~%]
+[%~ #                                paramDcl                                    ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "paramDcl" ~%]
+  [%~ #
+      # <paramDcl>                   ::= <paramAttribute> <paramTypeSpec> <simpleDeclarator>
+      # ~%]
+  [%~ paramAttribute = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ paramTypeSpec = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ simpleDeclarator = INCLUDE _process processArg0=array.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-class [% fullName %] {
-  use MooseX::ClassAttribute;
-  class_has value => (is => 'ro', isa => [% constType %], default => do {[% constExp %]});
-};
-use [% fullName %];
-our \$[% identifier %] = [% fullName %]->value;
+[% paramTypeSpec %] [% simpleDeclarator %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                            simpleDeclarator                                ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "simpleDeclarator" ~%]
+  [%~ #
+      # <simpleDeclarator>           ::= <identifier>
+      # ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.0 | trim ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% identifier %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
@@ -602,7 +766,7 @@ our \$[% identifier %] = [% fullName %]->value;
 
 [%~ END ~%]
 
-[%~ BLOCK _fullQualifiedScopedName %]
+[%~ BLOCK "_fullQualifiedScopedName" %]
   [%~ # ######################################################################## ~%]
   [%~ # Returns a full qualified scoped name                                     ~%]
   [%~ #                                                                          ~%]
@@ -628,7 +792,7 @@ our \$[% identifier %] = [% fullName %]->value;
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 [%~ END ~%]
 
-[%~ BLOCK _currentFullyQualifiedScopedName ~%]
+[%~ BLOCK "_currentFullyQualifiedScopedName" ~%]
   [%~ # ######################################################################## ~%]
   [%~ # Returns the current fully qualified scoped name                          ~%]
   [%~ #                                                                          ~%]
@@ -645,41 +809,41 @@ our \$[% identifier %] = [% fullName %]->value;
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 [%~ END ~%]
 
-[%~ BLOCK addSubTypeToCurrentScope ~%]
+[%~ BLOCK "_addMooseUtilTypeConstraintsToCurrentScope" ~%]
   [%~ # ######################################################################## ~%]
-  [%~ # Add a subtype declaration into current scope                             ~%]
+  [%~ # Add moose type constraint dependency                                     ~%]
   [%~ #                                                                          ~%]
-  [%~ # Input: addSubTypeToCurrentScopeArg0          an identifier               ~%]
+  [%~ # Input: N/A                                                               ~%]
   [%~ #                                                                          ~%]
-  [%~ # This block is used in cases where we want to remember subtypes per scope ~%]
+  [%~ # This block is used in cases where we want to create type constraints     ~%]
   [%~ #                                                                          ~%]
-  [%~ # Use case: MooseX::Types -declare => [qw/.../]                            ~%]
-  [%~ #                                                                          ~%]
-  [%~ # ######################################################################## ~%]
-  [%~ currentFullyQualifiedScopedName = PROCESS _currentFullyQualifiedScopedName | trim ~%]
-  [%~ subTtypesPerScope.$currentFullyQualifiedScopedName.$addSubTypeToCurrentScopeArg0 = 1 ~%]
-[%~ END ~%]
-
-[%~ BLOCK addMooseTypeToCurrentScope ~%]
-  [%~ # ######################################################################## ~%]
-  [%~ # Add a moose type declaration into current scope                          ~%]
-  [%~ #                                                                          ~%]
-  [%~ # Input: addMooseTypeToCurrentScopeArg0          a Moose type              ~%]
-  [%~ #                                                                          ~%]
-  [%~ # This block is used in cases where we want to remember moose types        ~%]
-  [%~ #                                                                          ~%]
-  [%~ # Use case: MooseX::Types::Moose qw/.../                                   ~%]
+  [%~ # Use case: subtype ...                                                    ~%]
   [%~ #                                                                          ~%]
   [%~ # ######################################################################## ~%]
   [%~ currentFullyQualifiedScopedName = PROCESS _currentFullyQualifiedScopedName | trim ~%]
-  [%~ mooseTypesPerScope.$currentFullyQualifiedScopedName.$addMooseTypeToCurrentScopeArg0 = 1 ~%]
+  [%~ mooseUtilTypeConstraintsPerScope.$currentFullyQualifiedScopedName = 1 ~%]
 [%~ END ~%]
 
-[%~ BLOCK addMoosexTypesStructuredToCurrentScope ~%]
+[%~ BLOCK "_addMoosexParamsValidateToCurrentScope" ~%]
+  [%~ # ######################################################################## ~%]
+  [%~ # Add moose method signatures  dependency                                  ~%]
+  [%~ #                                                                          ~%]
+  [%~ # Input: N/A                                                               ~%]
+  [%~ #                                                                          ~%]
+  [%~ # This block is used in cases where we want to create an around constraints~%]
+  [%~ #                                                                          ~%]
+  [%~ # Use case: around '...' {}                                                ~%]
+  [%~ #                                                                          ~%]
+  [%~ # ######################################################################## ~%]
+  [%~ currentFullyQualifiedScopedName = PROCESS _currentFullyQualifiedScopedName | trim ~%]
+  [%~ moosexParamsValidatePerScope.$currentFullyQualifiedScopedName = 1 ~%]
+[%~ END ~%]
+
+[%~ BLOCK "_addMoosexTypesStructuredToCurrentScope" ~%]
   [%~ # ################################################################################### ~%]
   [%~ # Add a moose type declaration into current scope                                     ~%]
   [%~ #                                                                                     ~%]
-  [%~ # Input: addMoosexTypesStructuredToCurrentScopeArg0  a MooseX::Types::Structured type ~%]
+  [%~ # Input: _addMoosexTypesStructuredToCurrentScopeArg0  a MooseX::Types::Structured type ~%]
   [%~ #                                                                                     ~%]
   [%~ # This block is used in cases where we want to remember moose types                   ~%]
   [%~ #                                                                                     ~%]
@@ -690,7 +854,7 @@ our \$[% identifier %] = [% fullName %]->value;
   [%~ moosexTypesStructuredPerScope.$currentFullyQualifiedScopedName.$addMooseyTypesStructuredToCurrentScopeArg0 = 1 ~%]
 [%~ END ~%]
 
-[%~ BLOCK addWithToCurrentScope ~%]
+[%~ BLOCK "_addWithToCurrentScope" ~%]
   [%~ # ######################################################################## ~%]
   [%~ # Add a with() dependency into current scope                               ~%]
   [%~ #                                                                          ~%]
@@ -698,14 +862,16 @@ our \$[% identifier %] = [% fullName %]->value;
   [%~ #                                                                          ~%]
   [%~ # This block is used in cases where we want to remember with() per scope   ~%]
   [%~ #                                                                          ~%]
-  [%~ # Use case: with (Something)                                               ~%]
+  [%~ # Use case: with 'Something', 'Else', ...                                  ~%]
   [%~ #                                                                          ~%]
   [%~ # ######################################################################## ~%]
   [%~ currentFullyQualifiedScopedName = PROCESS _currentFullyQualifiedScopedName | trim ~%]
-  [%~ withPerScope.$currentFullyQualifiedScopedName.push(withToCurrentScopeArg0) ~%]
+  [%~ withToCurrentScopeArg0 = withToCurrentScopeArg0.replace('\$', '') | trim ~%]
+
+  [%~ withPerScope.$currentFullyQualifiedScopedName.push('\'' _ withToCurrentScopeArg0 _ '\'') ~%]
 [%~ END ~%]
 
-[%~ BLOCK addUseToCurrentNamespace ~%]
+[%~ BLOCK "_addUseToCurrentNamespace" ~%]
   [%~ # ######################################################################## ~%]
   [%~ # Add a use dependency into current scope                                  ~%]
   [%~ #                                                                          ~%]
@@ -720,7 +886,7 @@ our \$[% identifier %] = [% fullName %]->value;
   [%~ usePerScope.$currentFullyQualifiedScopedName.push(useToCurrentScopeArg0)    ~%]
 [%~ END ~%]
 
-[%~ BLOCK printRole ~%]
+[%~ BLOCK "_printRole" ~%]
   [%~ # ######################################################################## ~%]
   [%~ # print a role block (everything is a role here)                           ~%]
   [%~ #                                                                          ~%]
@@ -728,26 +894,27 @@ our \$[% identifier %] = [% fullName %]->value;
   [%~ #        roleArg1               content                                    ~%]
   [%~ #                                                                          ~%]
   [%~ # ######################################################################## ~%]
+  [%~ # We want to remember role full name within this scope unless it is already fully qualified ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-role [% roleArg0 %] {
+package [% roleArg0 %] {
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  use [% (namespaceTypePerscope.$roleArg0 == 'class') ? 'Moose' : 'Moose::Role' %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ IF (subTtypesPerScope.$roleArg0.keys.size > 0) ~%]
-    [%~ usePerScope.$roleArg0.unshift('MooseX::Types -declare => [qw/' _ subTtypesPerScope.$roleArg0.keys.join(' ') _ '/]') ~%]
+    [%~ usePerScope.$roleArg0.unshift("MooseX::Types -declare => [qw/\n" _ subTtypesPerScope.$roleArg0.keys.sort.join("\n") _ "\n/]") ~%]
   [%~ END ~%]
-  [%~ IF (mooseTypesPerScope.$roleArg0.keys.size > 0) ~%]
-    [%~ usePerScope.$roleArg0.unshift('MooseX::Types::Moose qw/' _ mooseTypesPerScope.$roleArg0.keys.join(' ') _ '/') ~%]
+  [%~ IF (mooseUtilTypeConstraintsPerScope.$roleArg0 != 0) ~%]
+    [%~ usePerScope.$roleArg0.unshift('Moose::Util::TypeConstraints') ~%]
+  [%~ END ~%]
+  [%~ IF (moosexParamsValidatePerScope.$roleArg0 != 0) ~%]
+    [%~ usePerScope.$roleArg0.unshift('MooseX::Params::Validate') ~%]
   [%~ END ~%]
   [%~ IF (moosexTypesStructuredPerScope.$roleArg0.keys.size > 0) ~%]
-    [%~ usePerScope.$roleArg0.unshift('MooseX::Types::Structured [qw/' _ moosexTypesStructuredPerScope.$roleArg0.keys.join(' ') _ '/]') ~%]
+    [%~ usePerScope.$roleArg0.unshift("MooseX::Types::Structured [qw/\n" _ moosexTypesStructuredPerScope.$roleArg0.keys.sort.join("\n") _ "\n/]") ~%]
   [%~ END ~%]
   [%~ FOREACH use IN usePerScope.$roleArg0 ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 use [% use %];
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-  [%~ END ~%]
-  [%~ IF (withPerScope.$roleArg0.size > 0) ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-with (qw/[% withPerScope.$roleArg0.join(' ') %]/);
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
@@ -756,12 +923,18 @@ with (qw/[% withPerScope.$roleArg0.join(' ') %]/);
 [% roleArg1 %]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
   [%~ END ~%]
+  [%# We defer with list at the very end ~%]
+  [%~ IF (withPerScope.$roleArg0.size > 0) ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+with [% withPerScope.$roleArg0.sort.join(', ') %];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 };
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
 [%~ END ~%]
 
-[%~ BLOCK printCurrentRole ~%]
+[%~ BLOCK "_printCurrentRole" ~%]
   [%~ # ######################################################################## ~%]
   [%~ # print current role block                                                 ~%]
   [%~ #                                                                          ~%]
@@ -769,10 +942,10 @@ with (qw/[% withPerScope.$roleArg0.join(' ') %]/);
   [%~ #                                                                          ~%]
   [%~ # ######################################################################## ~%]
   [%~ currentFullyQualifiedScopedName = PROCESS _currentFullyQualifiedScopedName | trim ~%]
-  [%~ PROCESS printRole roleArg0=currentFullyQualifiedScopedName roleArg1=currentRoleArg0 ~%]
+  [%~ PROCESS _printRole roleArg0=currentFullyQualifiedScopedName roleArg1=currentRoleArg0 ~%]
 [%~ END ~%]
 
-[%~ BLOCK initNameSpace ~%]
+[%~ BLOCK "_initNameSpace" ~%]
   [%~ # ######################################################################## ~%]
   [%~ # Initalize a new namespace (root or scope)                                ~%]
   [%~ #                                                                          ~%]
@@ -781,7 +954,8 @@ with (qw/[% withPerScope.$roleArg0.join(' ') %]/);
   [%~ #        namespaceArg2        Can be 'nodefault'                           ~%]
   [%~ #                                                                          ~%]
   [%~ # ######################################################################## ~%]
-  [%~ fullName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=namespaceArg1 | trim %]
+  [%~ fullname = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=namespaceArg1 | trim %]
+  [%~ previousFullyQualifiedScopedName = PROCESS _currentFullyQualifiedScopedName | trim ~%]
   [%~ SWITCH namespaceArg0 ~%]
     [%~ CASE 'root' ~%]
       [%~ CALL root.push('::' _ namespaceArg1) ~%]
@@ -790,23 +964,26 @@ with (qw/[% withPerScope.$roleArg0.join(' ') %]/);
     [%~ CASE ~%]
       [%~ THROW namespaceArg0 "Bad argument: must be root or scope instead of " _ namespaceArg0 ~%]  
   [%~ END ~%]
+  [%~ namespaceTypePerscope.$fullname = (namespaceArg0 == 'root') ? 'class' : 'role' ~%]
   [%~ IF (namespaceArg2 == 'nodefault') ~%]
-    [%~ subTtypesPerScope.$fullName = {} ~%]
-    [%~ mooseTypesPerScope.$fullName = {} ~%]
-    [%~ moosexTypesStructuredPerScope.$fullName = {} ~%]
-    [%~ withPerScope.$fullName = [] ~%]
-    [%~ usePerScope.$fullName = []  ~%]
+    [%~ subTtypesPerScope.$fullname = {} ~%]
+    [%~ mooseUtilTypeConstraintsPerScope.$fullname = 0 ~%]
+    [%~ moosexTypesStructuredPerScope.$fullname = {} ~%]
+    [%~ moosexParamsValidatePerScope.$fullname = {} ~%]
+    [%~ withPerScope.$fullname = [] ~%]
+    [%~ usePerScope.$fullname = []  ~%]
   [%~ ELSE ~%]
-    [%~ subTtypesPerScope.$fullName = {} ~%]
-    [%~ mooseTypesPerScope.$fullName = {} ~%]
-    [%~ moosexTypesStructuredPerScope.$fullName = {} ~%]
-    [%~ withPerScope.$fullName = [] # The with ordering can be important ~%]
-    [%~ usePerScope.$fullName = ['MarpaX::Languages::IDL::AST::MooseX::_BaseTypes \':all\'',
+    [%~ subTtypesPerScope.$fullname = {} ~%]
+    [%~ mooseUtilTypeConstraintsPerScope.$fullname = 0 ~%]
+    [%~ moosexTypesStructuredPerScope.$fullname = {} ~%]
+    [%~ moosexParamsValidatePerScope.$fullname = {} ~%]
+    [%~ withPerScope.$fullname = [] # The with ordering can be important ~%]
+    [%~ usePerScope.$fullname = ['MarpaX::Languages::IDL::AST::MooseX::_BaseTypes qw/:all/',
                                  'MRO::Compat'] ~%]
   [%~ END ~%]
 [%~ END ~%]
 
-[%~ BLOCK closeLastNameSpace ~%]
+[%~ BLOCK "_closeLastNameSpace" ~%]
   [%~ # ######################################################################## ~%]
   [%~ # close last namespace (root or scope)                                     ~%]
   [%~ #                                                                          ~%]
@@ -820,5 +997,35 @@ with (qw/[% withPerScope.$roleArg0.join(' ') %]/);
       [%~ CALL scope.pop ~%]
     [%~ CASE ~%]
       [%~ THROW lastNamespaceArg0 "Bad argument: must be root or scope instead of " _ lastNamespaceArg0 ~%]  
+  [%~ END ~%]
+[%~ END ~%]
+
+[%~ BLOCK "_printScopedname" ~%]
+  [%~ # ######################################################################## ~%]
+  [%~ # make sure a scoped name (our $XXX) is printed once                       ~%]
+  [%~ #                                                                          ~%]
+  [%~ # Input: scopednameArg0        scoped name                                 ~%]
+  [%~ #        scopednameArg1        scoped name value                           ~%]
+  [%~ #                                                                          ~%]
+  [%~ # ######################################################################## ~%]
+  [%~ currentFullyQualifiedScopedName = PROCESS _currentFullyQualifiedScopedName | trim ~%]
+  [%~ yetPrinted = 0 ~%]
+  [%~ TRY ~%]
+    [%~ # Because of the strict mode this can generate an exception ~%]
+    [%~ IF (scopednamePerscope.$currentFullyQualifiedScopedName.exists(scopednameArg0)) ~%]
+      [%~ yetPrinted = 1 ~%]
+    [%~ END ~%]
+  [%~ CATCH ~%]
+    [%~ yetPrinted = 0 ~%]
+  [%~ END ~%]
+  [%~ IF (yetPrinted == 0) ~%]
+    [%~ scopednamePerscope.$currentFullyQualifiedScopedName.$scopednameArg0 = scopednameArg1 ~%]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+our \$[% scopednameArg0 %] = [% scopednameArg1 %];
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ ELSE ~%]
+    [%~ IF (scopednamePerscope.$currentFullyQualifiedScopedName.$scopednameArg0 != scopednameArg1) ~%]
+      [%~ THROW scopednameArg1 "Redefinition of scoped name to another value" ~%]
+    [%~ END ~%]
   [%~ END ~%]
 [%~ END ~%]
