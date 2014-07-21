@@ -264,7 +264,9 @@ lexeme default = action => [ start, length, value ] latm => 1 bless => ::name
 
 :start ::= <specification>
 
-<specification>              ::= <importAny> <definitionMany>
+<specification>              ::= <supportedCppCommandAny> <importAny> <definitionMany>
+<supportedCppCommandAny>     ::= <supportedCppCommand>*
+<supportedCppCommand>        ::= CPPSTYLEDIRECTIVE
 <definition>                 ::= <typeDcl> SEMICOLON
                              |   <constDcl> SEMICOLON
                              |   <exceptDcl> SEMICOLON
@@ -819,9 +821,10 @@ BS        ~ '\'
 # TAKE CARE: preprocessor commands are IGNORED in this version
 # Discard of a Perl comment
 ###########################
-<Perl style comment> ~ '#' <Perl comment interior>
-<Perl comment interior> ~ [^\n]*
-:discard ~ <Perl style comment>
+<_Cpp style directive> ~ '#' <_Cpp style directive interior>
+<_Cpp style directive interior> ~ [^\n]*
+CPPSTYLEDIRECTIVE ~ <_Cpp style directive>
+:discard ~ <_Cpp style directive>
 
 ####################
 # WhiteSpace discard
