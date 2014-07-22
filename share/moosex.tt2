@@ -671,13 +671,13 @@ has '[% declarator %]' => (is => 'rw', as => [% typeSpec %]);
     [%~ index = loop.index ~%]
     [%~ matches = elementSpecManyList.$index.match("'([^']+)'") ~%]
     [%~ IF (caseLabel.match('^else')) ~%]
-      [%~ else = caseLabel _ '{ $self->' _ matches.0 _ ';}' ~%]
+      [%~ else = caseLabel _ '{ return $self->' _ matches.0 _ ';}' ~%]
     [%~ ELSE ~%]
       [%~ IF (iIf == 0) ~%]
-        [%~ dummy = dummy _ caseLabel _ '{ $self->' _ matches.0 _ ';}' ~%]
+        [%~ dummy = dummy _ caseLabel _ '{ return $self->' _ matches.0 _ ';}' ~%]
       [%~ ELSE ~%]
         [%~ # Luckily, in perl, "else if" if "els" prepended to "if" -; ~%]
-        [%~ dummy = dummy _ 'els' _ caseLabel _ '{ $self->' _ matches.0 _ ';}' ~%]
+        [%~ dummy = dummy _ 'els' _ caseLabel _ '{ return $self->' _ matches.0 _ ';}' ~%]
       [%~ END ~%]
       [%~ iIf = iIf + 1 ~%]
     [%~ END ~%]
@@ -775,9 +775,9 @@ has '[% attr %]' => (is => 'rw', isa => [% paramTypeSpec %]);
     [%~ pos_validated_list = '' ~%]
   [%~ END ~%]
   [%~ IF (opTypeSpec != 'void') ~%]
-     [%~ rc_validated_list = 'my ($rc) = pos_validated_list([ $self->$orig(' _ parameters.join(',') _ ') ], {isa => ' _ opTypeSpec _ '});' ~%]
+     [%~ rc_validated_list = 'return pos_validated_list([ $self->$orig(' _ parameters.join(',') _ ') ], {isa => ' _ opTypeSpec _ '});' ~%]
   [%~ ELSE ~%]
-     [%~ rc_validated_list = 'my $rc = $self->$orig(' _ parameters.join(',') _ ');' ~%]
+     [%~ rc_validated_list = '$self->$orig(' _ parameters.join(',') _ '); return undef;' ~%]
   [%~ END ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 requires '[% identifier %]';
@@ -786,7 +786,6 @@ around '[% identifier %]' => sub {
   my \$self = shift;
   [% pos_validated_list %]
   [% rc_validated_list %]
-  return \$rc;
 };
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
