@@ -424,24 +424,24 @@ lexeme default = action => [ start, length, value ] latm => 1 bless => ::name
 <memberList>                 ::= <member>+
 <member>                     ::= <typeSpec> <declarators> SEMICOLON
 <unionType>                  ::= UNION <identifier> SWITCH LPAREN <switchTypeSpec> RPAREN LCURLY <switchBody> RCURLY
-<switchTypeSpec>             ::=<integerType>
-                             | <charType>
-                             | <booleanType>
-                             | <enumType>
-                             | <scopedName>
+<switchTypeSpec>             ::= <integerType>
+                             |   <charType>
+                             |   <booleanType>
+                             |   <enumType>
+                             |   <scopedName>
 <switchBody>                 ::= <case>+
-<case>                       ::= <caseLabelAny> <elementSpec> SEMICOLON
+<case>                       ::= <caseLabelMany> <elementSpec> SEMICOLON
 <caseLabel>                  ::= CASE <constExp> COLON
-                             | DEFAULT COLON
+                             |   DEFAULT COLON
 <elementSpec>                ::= <typeSpec> <declarator>
 <enumType>                   ::= ENUM <identifier> LCURLY <enumeratorListMany> RCURLY
 <enumerator>                 ::= <identifier>
 <sequenceType>               ::= SEQUENCE LT <simpleTypeSpec> COMMA <positiveIntConst> GT
-                             | SEQUENCE LT <simpleTypeSpec> GT
+                             |   SEQUENCE LT <simpleTypeSpec> GT
 <stringType>                 ::= STRING LT <positiveIntConst> GT
-                             | STRING
+                             |   STRING
 <wideStringType>             ::= WSTRING LT <positiveIntConst> GT
-                             | WSTRING
+                             |   WSTRING
 <arrayDeclarator>            ::= <identifier> <fixedArraySizeMany>
 <fixedArraySize>             ::= LBRACKET <positiveIntConst> RBRACKET
 <attrDcl>                    ::= <readonlyAttrSpec>
@@ -559,7 +559,7 @@ lexeme default = action => [ start, length, value ] latm => 1 bless => ::name
 <raisesExprMaybe> ::=
 <initParamDeclListMany> ::= <initParamDecl>+ separator => <comma>
 <declaratorListMany> ::= <declarator>+ separator => <comma>
-<caseLabelAny> ::= <caseLabel>+
+<caseLabelMany> ::= <caseLabel>+
 <enumeratorListMany> ::= <enumerator>+ separator => <comma>
 <fixedArraySizeMany> ::= <fixedArraySize>+
 <memberAny> ::= <member>*

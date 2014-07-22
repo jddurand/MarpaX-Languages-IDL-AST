@@ -75,7 +75,6 @@ use Modern::Perl;
 [%~ BLOCK "DIV"       ~%][%#~%]/[%#~%] [%~ END ~%]
 [%~ BLOCK "MOD"       ~%][%#~%]%[%#~%] [%~ END ~%]
 [%~ BLOCK "TILDE"     ~%][%#~%]~[%#~%] [%~ END ~%]
-[%~ BLOCK "SEMICOLON" ~%][%#~%];[%#~%] [%~ END ~%]
 [%~ BLOCK "TRUE"      ~%][%#~%]1[%#~%] [%~ END ~%]
 [%~ BLOCK "FALSE"     ~%][%#~%]0[%#~%] [%~ END ~%]
 [%~ BLOCK "VOID"      ~%][%#~%]void[%#~%] [%~ END ~%]
@@ -151,11 +150,11 @@ ArrayRef[[% simpleTypeSpec %]]
   [%~ IF array.size == 4 ~%]
     [%~ positiveIntConst = INCLUDE _process processArg0=array.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-wideStringType, where => {length(\$_) <= [% positiveIntConst %]}
+_wideStringType, where => {length(\$_) <= [% positiveIntConst %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ ELSE ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-wideStringType
+_wideStringType
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
   [%~ processSubtree = 0 ~%]
@@ -173,11 +172,11 @@ wideStringType
   [%~ IF array.size == 4 ~%]
     [%~ positiveIntConst = INCLUDE _process processArg0=array.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-charType, where => {length(\$_) <= [% positiveIntConst %]}
+_charType, where => {length(\$_) <= [% positiveIntConst %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ ELSE ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-charType
+_charType
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ END ~%]
   [%~ processSubtree = 0 ~%]
@@ -194,7 +193,7 @@ charType
   [%~ positiveIntConst1 = INCLUDE _process processArg0=array.2 | trim ~%]
   [%~ positiveIntConst2 = INCLUDE _process processArg0=array.4 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-floatingPtType, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiveIntConst2 %]); $x->accuracy([% positiveIntConst2 %]); $x}
+_floatingPtType, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiveIntConst2 %]); $x->accuracy([% positiveIntConst2 %]); $x}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
@@ -296,10 +295,9 @@ floatingPtType, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positive
   [%~ #
       # <enumType>                   ::= ENUM <identifier> LCURLY <enumeratorListMany> RCURLY
       # ~%]
+  [%# Note: an enum does NOT open a new scope
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
-  [%~ CALL scope.push('::' _ identifier) ~%]
   [%~ enumeratorListMany = INCLUDE _process processArg0=array.3 | trim ~%]
-  [%~ CALL scope.pop ~%]
   [%~ PROCESS _addMoosexTypesToCurrentScope moosexTypesArg0=identifier ~%]
   [%# Note: by convention we always return list separated by ',', whatever is the context ~%]
   [%~ PROCESS _addMoosexTypesMooseToCurrentScope moosexTypesMooseArg0='Int' ~%]
@@ -333,6 +331,67 @@ class_has '[% enumerator %]' => (is => 'ro', isa => Int, default => [% loop.inde
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% declaratorListMany.join(',') %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                 switchBody                                 ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "switchBody" ~%]
+  [%~ #
+      # <switchBody>                 ::= <case>+
+      # ~%]
+  [%~ switchBody = [] ~%]
+  [%~ FOREACH rhs IN array ~%]
+    [%~ switch = INCLUDE _process processArg0=rhs | trim ~%]
+    [%~ switchBody.push(switch) ~%]
+  [%~ END ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% switchBody.join("\0") %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                               caseLabel                                    ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "caseLabel" ~%]
+  [%~ #
+      # <caseLabel>                  ::= CASE <constExp> COLON
+      #                              |   DEFAULT COLON
+      # ~%]
+  [%~ IF (case.elementSpecMode == 0) ~%]
+    [%~ IF (array.size == 3) ~%]
+      [%~ constExp = INCLUDE _process processArg0=array.1 | trim ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+if (\$[% case.discriminatorLabel %] == [% constExp %])
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+    [%~ ELSE ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+else
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+    [%~ END ~%]
+  [%~ END ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                              elementSpec                                   ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "elementSpec" ~%]
+  [%~ #
+      # <elementSpec>                ::= <typeSpec> <declarator>
+      # ~%]
+  [%~ IF (case.elementSpecMode == 1) ~%]
+    [%~ typeSpec = INCLUDE _process processArg0=array.0 | trim ~%]
+    [%~ declarator = INCLUDE _process processArg0=array.1 | trim ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+has '[% declarator %]' => (is => 'rw', isa => [% typeSpec %]);
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
@@ -573,6 +632,63 @@ has '[% declarator %]' => (is => 'rw', as => [% typeSpec %]);
   [%~ dummy = 'class_has \'' _ identifier _ '\' => (is => \'ro\', isa => ' _ constType _ ', default => do {' _ constExp _ '});' ~%]
   [%~ PROCESS _printCurrentRole currentRoleArg0=dummy ~%]
   [%~ PROCESS _closeLastNameSpace lastNamespaceArg0='scope' ~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                                unionType                                   ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "unionType" ~%]
+  [%~ #
+      # <unionType>                  ::= UNION <identifier> SWITCH LPAREN <switchTypeSpec> RPAREN LCURLY <switchBody> RCURLY
+      # ~%]
+  [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ switchTypeSpec = INCLUDE _process processArg0=array.4 | trim ~%]
+  [%~ CALL scope.push('::' _ identifier) ~%]
+  [%~ case.elementSpecMode = 1 ~%]
+  [%~ elementSpecMany = INCLUDE _process processArg0=array.7 | trim ~%]
+  [%~ case.elementSpecMode = 0 ~%]
+  [%~ case.discriminatorLabel = 'discriminator' ~%]
+  [%~ caseLabelMany = INCLUDE _process processArg0=array.7 | trim ~%]
+  [%~ CALL scope.pop ~%]
+
+  [%~ unionFullyQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim ~%]
+  [%~ PROCESS _addMoosexTypesToCurrentScope moosexTypesArg0=identifier ~%]
+  [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='role_type ' _ identifier _ ', {role => \'' _ unionFullyQualifiedScopedName _ '\'}' ~%]
+  [%~ PROCESS _initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='' ~%]
+  [%~ # Note: we made sure that elementSpecs are fully qualified lines, separated by "\0" for convenience ~%]
+  [%~ dummy = elementSpecMany.split("\0").join("\n") ~%]
+  [%~ # Note: we add a method identifier that will return one of the members ~%]
+  [%~ PROCESS _addMoosexParamsValidateToCurrentScope ~%]
+  [%~ input_validated_list = 'my ($discriminator) = pos_validated_list(\@_, {isa => ' _ switchTypeSpec _ '});' ~%]
+  [%~ dummy = dummy _ "\n" _ 'sub ' _ identifier _ '{ my $self = shift; ' _ input_validated_list ~%]
+  [%~ # Note: we want the "else" to only appear at the end, if any ~%]
+  [%~ else = '' ~%]
+  [%~ elementSpecManyList = elementSpecMany.split("\0") ~%]
+  [%~ iIf = 0 ~%]
+  [%~ FOREACH caseLabel IN caseLabelMany.split("\0") ~%]
+    [%~ index = loop.index ~%]
+    [%~ matches = elementSpecManyList.$index.match("'([^']+)'") ~%]
+    [%~ IF (caseLabel.match('^else')) ~%]
+      [%~ else = caseLabel _ '{ $self->' _ matches.0 _ ';}' ~%]
+    [%~ ELSE ~%]
+      [%~ IF (iIf == 0) ~%]
+        [%~ dummy = dummy _ caseLabel _ '{ $self->' _ matches.0 _ ';}' ~%]
+      [%~ ELSE ~%]
+        [%~ # Luckily, in perl, "else if" if "els" prepended to "if" -; ~%]
+        [%~ dummy = dummy _ 'els' _ caseLabel _ '{ $self->' _ matches.0 _ ';}' ~%]
+      [%~ END ~%]
+      [%~ iIf = iIf + 1 ~%]
+    [%~ END ~%]
+  [%~ END ~%]
+  [%~ IF (else != '') ~%]
+  [%~ dummy = dummy _ else ~%]
+  [%~ END ~%]
+  [%~ dummy = dummy _ '};' ~%]
+  [%~ PROCESS _printCurrentRole currentRoleArg0=dummy ~%]
+  [%~ PROCESS _closeLastNameSpace lastNamespaceArg0='scope' ~%]
+  [%~ PROCESS _addWithToCurrentScope withToCurrentScopeArg0=unionFullyQualifiedScopedName ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
