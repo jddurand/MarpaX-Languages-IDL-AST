@@ -295,7 +295,7 @@ _floatingPtType, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiv
   [%~ #
       # <enumType>                   ::= ENUM <identifier> LCURLY <enumeratorListMany> RCURLY
       # ~%]
-  [%# Note: an enum does NOT open a new scope
+  [%~# Note: an enum does NOT open a new scope ~%]
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ enumeratorListMany = INCLUDE _process processArg0=array.3 | trim ~%]
   [%~ PROCESS _addMoosexTypesToCurrentScope moosexTypesArg0=identifier ~%]
