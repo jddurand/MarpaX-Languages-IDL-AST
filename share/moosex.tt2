@@ -257,7 +257,6 @@ _floatingPtType, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiv
   [%~ abstractOrLocalMaybe = INCLUDE _process processArg0=array.0 | trim ~%]
   [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
   [%~ interfaceFullyQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim ~%]
-  [%~ PROCESS _addWithToCurrentScope withToCurrentScopeArg0=interfaceFullyQualifiedScopedName ~%]
   [%~ PROCESS _addMoosexTypesToCurrentScope moosexTypesArg0=identifier ~%]
   [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='role_type ' _ identifier _ ', {role => \'' _ interfaceFullyQualifiedScopedName _ '\'}' ~%]
   [%~ PROCESS _initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='' ~%]
@@ -634,13 +633,13 @@ has '[% declarator %]' => (is => 'rw', as => [% typeSpec %]);
   [%~ #
       # <constDcl>                   ::= CONST <constType> <identifier> EQUAL <constExp>
       # ~%]
-  [%~ constType = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ identifier = INCLUDE _process processArg0=array.2 | trim ~%]
-  [%~ constExp = INCLUDE _process processArg0=array.4 | trim ~%]
   [%~ constFullyQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim ~%]
   [%~ PROCESS _addMoosexTypesToCurrentScope moosexTypesArg0=identifier ~%]
   [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='role_type ' _ identifier _ ', {role => \'' _ constFullyQualifiedScopedName _ '\'}' ~%]
   [%~ PROCESS _initNameSpace namespaceArg0='scope' namespaceArg1=identifier namespaceArg2='' ~%]
+  [%~ constType = INCLUDE _process processArg0=array.1 | trim ~%]
+  [%~ constExp = INCLUDE _process processArg0=array.4 | trim ~%]
   [%~ dummy = 'has \'' _ identifier _ '\' => (is => \'ro\', isa => ' _ constType _ ', default => do {' _ constExp _ '});' ~%]
   [%~ PROCESS _printCurrentNamespace currentNamespaceArg0=dummy ~%]
   [%~ PROCESS _closeLastNameSpace lastNamespaceArg0='scope' ~%]
