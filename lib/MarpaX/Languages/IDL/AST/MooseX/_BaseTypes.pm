@@ -3,6 +3,7 @@
 package MarpaX::Languages::IDL::AST::MooseX::_BaseTypes;
 use MooseX::Types -declare => [
                                qw/_floatingPtType
+                                  _nativeFloatingPtType
                                   _signedShortInt
                                   _signedLongInt
                                   _signedLonglongInt
@@ -18,9 +19,10 @@ use MooseX::Types -declare => [
                                   _objectType
                                   _valueBaseType
                                   _anyType/];
-use MooseX::Types::Moose qw/Int Str Bool Object Any/;
+use MooseX::Types::Moose qw/Int Str Bool Object Any Num/;
 
 class_type _floatingPtType,      { class => 'Math::BigFloat' };
+subtype    _nativeFloatingPtType,as Num;
 subtype    _signedShortInt,      as Int, where { ($_ >= -2**15) && ($_ <= (2**15 - 1))};
 subtype    _signedLongInt,       as Int, where { ($_ >= -2**31) && ($_ <= (2**31 - 1))};
 subtype    _signedLonglongInt,   as Int, where { ($_ >= -2**63) && ($_ <= (2**63 - 1))};
