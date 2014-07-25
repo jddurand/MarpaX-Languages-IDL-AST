@@ -234,6 +234,7 @@ sub generate {
     #
     $ttVarsHashp->{ast} //= $ast;
     $ttVarsHashp->{nativeFloat} = $targetOptionHashp->{nativeFloat} // 1;
+    $ttVarsHashp->{style} = $targetOptionHashp->{style} // 'Moose';
 
     $self->{_output} = '';
     $tt->process($template, $ttVarsHashp, \$self->{_output}) || croak $tt->error();
