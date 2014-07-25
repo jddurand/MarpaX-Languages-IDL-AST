@@ -1,0 +1,22 @@
+[%~ IF (namespaceTypePerscope.$roleArg0 == 'class' || namespaceTypePerscope.$roleArg0 == 'role') ~%]
+package [% roleArg0 %] {
+  use [% (namespaceTypePerscope.$roleArg0 == 'class') ? 'Moose' : 'Moose::Role' %];
+  use MRO::Compat;
+  use namespace::sweep;
+[%~ END ~%]
+[%~ FOREACH use IN usePerScope.$roleArg0 ~%]
+  use [% use %];
+[%~ END ~%]
+
+[% roleArg1 %]
+[%~ IF (withPerScope.$roleArg0.size > 0) ~%]
+
+  with [% withPerScope.$roleArg0.sort.join(', ') %];
+[%~ END ~%]
+[%~ IF (namespaceTypePerscope.$roleArg0 == 'class') ~%];
+
+  __PACKAGE__->meta->make_immutable;
+[%~ END ~%]
+[%~ IF (namespaceTypePerscope.$roleArg0 == 'class' || namespaceTypePerscope.$roleArg0 == 'role') ~%]
+};
+[%~ END ~%]

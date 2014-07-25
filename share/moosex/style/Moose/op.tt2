@@ -1,0 +1,32 @@
+[%~ PROCESS _addMoosexParamsValidateToCurrentScope ~%]
+[%~ parameters = [] ~%]
+[%~ paramTypeSpec = [] ~%]
+[%~ FOREACH parameter IN parameterDcls.split(',') ~%]
+  [%~ parameters.push('$' _ parameter.split(' ').last) ~%]
+  [%~ paramTypeSpec.push(parameter.split(' ').first) ~%]
+[%~ END ~%] 
+[%~ IF (parameters.size > 0) ~%]
+  [%~ pos_validated_list = 'my (' _ parameters.join(',') _ ') = pos_validated_list(\\@_, ' ~%]
+  [%~ FOREACH parameter IN parameters ~%]
+    [%~ index = loop.index() ~%]
+    [%~ IF (index > 0) ~%]
+      [%~ pos_validated_list = pos_validated_list _ ',' ~%]
+    [%~ END ~%]
+    [%~ pos_validated_list = pos_validated_list _ '{isa => ' _ paramTypeSpec.$index _ '}' ~%]
+  [%~ END ~%]
+  [%~ pos_validated_list = pos_validated_list _ ');' ~%]
+[%~ ELSE ~%]
+  [%~ pos_validated_list = '' ~%]
+[%~ END ~%]
+[%~ IF (opTypeSpec != 'void') ~%]
+   [%~ rc_validated_list = 'return pos_validated_list([ $self->$orig(' _ parameters.join(',') _ ') ], {isa => ' _ opTypeSpec _ '});' ~%]
+[%~ ELSE ~%]
+   [%~ rc_validated_list = '$self->$orig(' _ parameters.join(',') _ '); return undef;' ~%]
+[%~ END ~%]
+requires '[% identifier %]';
+around '[% identifier %]' => sub {
+  my \$orig = shift;
+  my \$self = shift;
+  [% pos_validated_list %]
+  [% rc_validated_list %]
+};
