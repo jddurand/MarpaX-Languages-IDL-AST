@@ -205,9 +205,15 @@ _stringType
   [%~ positiveIntConst1 = INCLUDE _process processArg0=array.2 | trim ~%]
   [%~ positiveIntConst2 = INCLUDE _process processArg0=array.4 | trim ~%]
   [%~ PROCESS _addUseToCurrentNamespace useToCurrentScopeArg0='MarpaX::Languages::IDL::AST::MooseX::_BaseTypes qw/:all/' ~%]
+  [%~ IF (nativeFloat == 1) ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-[% nativeFloat ? '_nativeFloatingPtType' : '_floatingPtType' %], via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiveIntConst2 %]); $x->accuracy([% positiveIntConst2 %]); $x}
+_nativeFloatingPtType
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ ELSE ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+_floatingPtType, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiveIntConst2 %]); $x->accuracy([% positiveIntConst2 %]); $x}
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ END ~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
 
