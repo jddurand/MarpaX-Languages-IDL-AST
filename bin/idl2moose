@@ -39,7 +39,7 @@ if ($output) {
     print $output $result;
     close(OUTPUT) || warn "Cannot close $output, $!";
 } else {
-    print $output;
+    print $result;
 }
 
 exit(EXIT_SUCCESS);
