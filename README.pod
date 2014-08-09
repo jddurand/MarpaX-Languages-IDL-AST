@@ -1,0 +1,139 @@
+=pod
+
+=encoding utf-8
+
+=head1 NAME
+
+MarpaX::Languages::IDL::AST - Translate an IDL source to an AST
+
+=head1 VERSION
+
+version 0.001
+
+=head1 SYNOPSIS
+
+    use MarpaX::Languages::IDL::AST;
+
+    my $idlPath = 'source.idl';
+    my $ast = MarpaX::Languages::IDL::AST->new()->parse($idlPath)->validate();
+
+=head2 $class->new()
+
+Instantiate a new object. Returns a reference to it, denoted $self hereafter.
+
+=head2 $self->parse($path, $hashOptPtr)
+
+Parse the IDL and produce an AST out of it, then a meta-AST that is more useful representation for further processing. Takes as parameters:
+
+=over
+
+=item $path
+
+A required IDL pathname.
+
+=item $hashOptPtr
+
+An optional reference to a hash containing Marpa::R2::Scanless::R() parameters, except the grammar and semantics_package options.
+
+=back
+
+The AST is an exact representation of the parse tree value of the IDL grammar contained in this package, except:
+
+=over
+
+=item scopedName
+
+Original grammar rule is:
+
+ <scopedName> ::= <identifier> | '::' <identifier> | <scopedName> '::' <identifier>
+
+and has been rewriten to:
+
+ <scopedName> ::= <identifier>+ separator => <coloncolon>
+
+A dedicated action rule will concatenate all identifiers into a single string, giving the impression that scopedName is a token (accurate terminology is a lexeme). I.e. the scopedName value in the AST is in the form:
+
+bless([start,totalLength,concatenatedValue], 'IDL::AST::scopedName')
+
+alike the identifier.
+
+=back
+
+This method returns $self.
+
+=head2 $self->ast()
+
+Returns the latest AST produced by $self->parse().
+
+=head2 $self->output()
+
+Returns the latest output produced by $self->generate().
+
+=head2 $self->generate($ast, $template, $targetOptionHashp)
+
+Generate files for the given AST $ast.
+
+=over
+
+=item $ast
+
+AST as produced by the method $self->parse(). Default to $self->ast().
+
+=item $template
+
+Template-Toolkit template name. Default to 'moosex.tt2', available in this distribution.
+
+=item $targetOptionHashp
+
+Hash reference of options specific to target $target.
+
+=back
+
+This method returns $self.
+
+=head1 DESCRIPTION
+
+This module provide and manage an AST of an IDL file, as per OMG's IDL 3.5 grammar specification.
+
+=head1 NOTES
+
+IDL version is 3.5 as of L<OMG IDL3.5 Specification|http://www.omg.org/spec/IDL35/3.5/>.
+
+This specification imposes input to come from a filename, with suffix '.idl'.
+
+Any preprocessing feature is ignored, and eventual multi-line proprocessing directives are likely to cause failure. Since the most expected preprocessing tokens are #include, #ifdef, and al., the user is expected to have already run a preprocessor before using this package.
+
+=head1 SEE ALSO
+
+L<Marpa::R2>
+
+=for :stopwords cpan testmatrix url annocpan anno bugtracker rt cpants kwalitee diff irc mailto metadata placeholders metacpan
+
+=head1 SUPPORT
+
+=head2 Bugs / Feature Requests
+
+Please report any bugs or feature requests through the issue tracker
+at L<https://rt.cpan.org/Public/Dist/Display.html?Name=MarpaX-Languages-IDL-AST>.
+You will be notified automatically of any progress on your issue.
+
+=head2 Source Code
+
+This is open source software.  The code repository is available for
+public review and contribution under the terms of the license.
+
+L<https://github.com/jddurand/marpax-languages-idl-ast>
+
+  git clone git://github.com/jddurand/marpax-languages-idl-ast.git
+
+=head1 AUTHOR
+
+Jean-Damien Durand <jeandamiendurand@free.fr>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2014 by Jean-Damien Durand.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+

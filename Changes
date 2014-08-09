@@ -1,0 +1,91 @@
+Changelog for MarpaX-Languages-IDL-AST
+
+0.001 2014-08-09T09:25:50
+ [Jean-Damien Durand <jeandamiendurand@free.fr>]
+ - bin/idl2moose: fix output on STDOUT
+ - bin/idl2moose
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - data/dom.idl: Dom Level 3 Core
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - dev+
+ - t/dom.t: remove Dumper()
+ - Add bessing and move parse() to a direct ast() method
+ - wide_string fix
+ - dev+
+ - dev+
+ - dev+
+
