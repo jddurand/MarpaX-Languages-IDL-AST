@@ -210,12 +210,14 @@ sub generate {
 	croak '3rd argument must be a pointer to HASH';
     }
 
-    my $moduleDir = module_dir(__PACKAGE__);
+    my $packageDist = __PACKAGE__;
+    $packageDist =~ s/::/-/g;
+    my $distDir = dist_dir($packageDist);
     my $ttOptionHashp = $targetOptionHashp->{tt};
     $ttOptionHashp->{STRICT} //= 1;
     $ttOptionHashp->{DELIMITER} //= $Config{path_sep};
     $ttOptionHashp->{INCLUDE_PATH} //= '';
-    $ttOptionHashp->{INCLUDE_PATH} .= $ttOptionHashp->{DELIMITER} . $moduleDir;
+    $ttOptionHashp->{INCLUDE_PATH} .= $ttOptionHashp->{DELIMITER} . $distDir;
     $ttOptionHashp->{INTERPOLATE} //= 1;
     $ttOptionHashp->{EVAL_PERL} //= 1;
     $ttOptionHashp->{PRE_CHOMP} //= CHOMP_NONE;
