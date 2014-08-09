@@ -36,7 +36,7 @@ my $result = $r->generate()->output();
 
 if ($output) {
     open(OUTPUT, '>', $output) || die "Cannot open $output, $!";
-    print $output $result;
+    print OUTPUT $result;
     close(OUTPUT) || warn "Cannot close $output, $!";
 } else {
     print $result;
