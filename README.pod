@@ -8,7 +8,7 @@ MarpaX::Languages::IDL::AST - Translate an IDL source to an AST
 
 =head1 VERSION
 
-version 0.001
+version 0.002
 
 =head1 SYNOPSIS
 

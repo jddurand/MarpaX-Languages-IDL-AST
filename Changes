@@ -1,7 +1,14 @@
 Changelog for MarpaX-Languages-IDL-AST
 
-0.001 2014-08-09T09:26:16
+0.002 2014-08-09T15:30:56
  [Jean-Damien Durand <jeandamiendurand@free.fr>]
+ - AST.pm: fix for sharedir
+ - bin/idl2moose: fix for -o option
+ - bin/idl2moose: fix example
+
+0.001 2014-08-09T09:26:39
+ [Jean-Damien Durand <jeandamiendurand@free.fr>]
+ - Release of version 0.001
  - For initial release
  - bin/idl2moose: fix output on STDOUT
  - bin/idl2moose
