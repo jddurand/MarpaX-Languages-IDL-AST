@@ -1,7 +1,8 @@
 Changelog for MarpaX-Languages-IDL-AST
 
-0.001 2014-08-09T09:25:50
+0.001 2014-08-09T09:26:16
  [Jean-Damien Durand <jeandamiendurand@free.fr>]
+ - For initial release
  - bin/idl2moose: fix output on STDOUT
  - bin/idl2moose
  - dev+
