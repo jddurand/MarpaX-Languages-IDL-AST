@@ -80,7 +80,7 @@ Use of native floats. A false value will force Math::BigFloat. Default to a true
 
 =head1 EXAMPLES
 
- idl2moose dom.idl > dom.pm
+ idl2moose -i dom.idl > dom.pm
 
 =head1 SEE ALSO
 
