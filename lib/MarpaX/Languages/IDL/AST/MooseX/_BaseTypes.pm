@@ -1,6 +1,12 @@
-#!env perl
+use strict;
+use warnings FATAL => 'all';
 
 package MarpaX::Languages::IDL::AST::MooseX::_BaseTypes;
+
+# ABSTRACT: MooseX-IDL base types mapping
+
+# VERSION
+
 use MooseX::Types -declare => [
                                qw/_floatingPtType
                                   _nativeFloatingPtType

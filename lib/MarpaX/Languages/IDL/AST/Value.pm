@@ -4,7 +4,7 @@ use warnings FATAL => 'all';
 package MarpaX::Languages::IDL::AST::Value;
 use Scalar::Util qw/blessed/;
 
-# ABSTRACT: Translate an IDL source to an AST - parse tree value
+# ABSTRACT: Translate an IDL source to an AST - parse tree value helpers
 
 # VERSION
 

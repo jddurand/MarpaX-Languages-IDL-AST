@@ -16,5 +16,5 @@ BEGIN {
 
 my $obj = MarpaX::Languages::IDL::AST->new();
 my $r = $obj->parse(catfile('data', 'dom.idl'));
-print STDERR $r->generate()->output();
+my $output = $r->generate()->output();
 ok(defined($r), "dom.idl is OK");
