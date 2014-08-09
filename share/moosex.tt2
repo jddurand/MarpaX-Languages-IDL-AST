@@ -80,7 +80,7 @@
       # ~%]
   [%~ importedScope = INCLUDE _process processArg0=array.0 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-load [% importedScope %]
+use [% importedScope %];
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 %]
 [%~ END ~%]
