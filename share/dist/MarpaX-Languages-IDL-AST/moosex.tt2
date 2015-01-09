@@ -226,13 +226,9 @@ _floatingPtType, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiv
       # <structType>                 ::= STRUCT <identifier> LCURLY <memberList> RCURLY
       # ~%]
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
-  [%~ CALL scope.push(identifier) ~%]
-  [%~ currentFullyQualifiedScopedName = PROCESS _currentFullyQualifiedScopedName | trim ~%]
-  [%~ usePerScope.$currentFullyQualifiedScopedName = []  ~%]
   [%~ idlContext.Dict = 1 ~%]
   [%~ memberList = INCLUDE _process processArg0=array.3 | trim ~%]
   [%~ idlContext.Dict = 0 ~%]
-  [%~ CALL scope.pop ~%]
   [%~ PROCESS _addMoosexTypesStructuredToCurrentScope addMoosexTypesStructuredToCurrentScopeArg0='Dict' ~%]
   [%~ PROCESS _addMoosexTypesToCurrentScope moosexTypesArg0=identifier ~%]
   [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='subtype ' _ identifier _ ', as Dict[' _ memberList _ ']' ~%]
