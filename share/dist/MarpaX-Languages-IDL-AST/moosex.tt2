@@ -227,6 +227,8 @@ _floatingPtType, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiv
       # ~%]
   [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
   [%~ CALL scope.push(identifier) ~%]
+  [%~ currentFullyQualifiedScopedName = PROCESS _currentFullyQualifiedScopedName | trim ~%]
+  [%~ usePerScope.$currentFullyQualifiedScopedName = []  ~%]
   [%~ idlContext.Dict = 1 ~%]
   [%~ memberList = INCLUDE _process processArg0=array.3 | trim ~%]
   [%~ idlContext.Dict = 0 ~%]

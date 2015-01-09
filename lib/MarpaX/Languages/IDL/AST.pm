@@ -8,7 +8,7 @@ use Scalar::Util qw/blessed reftype refaddr/;
 use Data::Dumper;
 use Template;
 use Template::Constants qw/:chomp :debug/;
-use File::ShareDir ':ALL';
+use File::ShareDir::ProjectDistDir 1.0 ':all', strict => 1;
 use Config;
 
 # ABSTRACT: Translate an IDL source to an AST
