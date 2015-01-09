@@ -305,34 +305,6 @@ _floatingPtType, via {my $x = Math::BigFloat->new(\$_); $x->precision([% positiv
 [%~ END ~%]
 
 [%~ # .......................................................................... ~%]
-[%~ #                                  enumTypeOrig                                  ~%]
-[%~ # .......................................................................... ~%]
-
-[%~ BLOCK "enumTypeOrig" ~%]
-  [%~ #
-      # <enumType>                   ::= ENUM <identifier> LCURLY <enumeratorListMany> RCURLY
-      # ~%]
-  [%~# Note: an enum does NOT open a new scope ~%]
-
-  [%~ enumType = 'Int' ~%]
-  [%~ identifier = INCLUDE _process processArg0=array.1 | trim ~%]
-  [%~ enumeratorListMany = INCLUDE _process processArg0=array.3 | trim ~%]
-  [%~ enumFullyQualifiedScopedName = PROCESS _fullQualifiedScopedName fullQualifiedScopedNameArg0=identifier | trim ~%]
-  [%~ PROCESS _addMoosexTypesToCurrentScope moosexTypesArg0=identifier ~%]
-  [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='role_type ' _ identifier _ ', {role => \'' _ enumFullyQualifiedScopedName _ '\'}' ~%]
-  [%~ PROCESS _initNameSpace namespaceArg0='scope' namespaceArg1=identifier ~%]
-  [%~ PROCESS _addMoosexTypesMooseToCurrentScope moosexTypesMooseArg0='Int' ~%]
-  [%~ dummy = '' ~%]
-  [%~ FOREACH enumerator IN enumeratorListMany.split(',') ~%]
-    [%~ dummy = dummy _ 'has \'' _ enumerator _ '\' => (is => \'ro\', isa => ' _ enumType _ ', default => ' _ loop.index _ ');' ~%]
-  [%~ END ~%]
-  [%~ PROCESS _printCurrentNamespace currentNamespaceArg0=dummy ~%]
-  [%~ PROCESS _closeLastNameSpace lastNamespaceArg0='scope' ~%]
-  [%~ PROCESS _addWithToCurrentScope withToCurrentScopeArg0=enumFullyQualifiedScopedName ~%]
-  [%~ processSubtree = 0 ~%]
-[%~ END ~%]
-
-[%~ # .......................................................................... ~%]
 [%~ #                                  enumType                                  ~%]
 [%~ # Note: an enum does define a new type                                       ~%]
 [%~ # .......................................................................... ~%]
