@@ -1,12 +1,21 @@
 Changelog for MarpaX-Languages-IDL-AST
 
-0.002 2014-08-09T15:30:56
+0.003 2015-01-09T19:15:25
+ [Jean-Damien Durand <jeandamiendurand@free.fr>]
+ - share/dist/MarpaX-Languages-IDL-AST/moosex.tt2: removed unused block
+   enumTypeOrig
+ - share/dist/MarpaX-Languages-IDL-AST/moosex.tt2: structType fix
+ - share/dist/MarpaX-Languages-IDL-AST/moosex.tt2: Removed unused
+   namespaceArg2
+ - use File::ShareDir::ProjectDistDir + a fix in template for structType
+
+0.002 2014-08-09T15:30:56Z
  [Jean-Damien Durand <jeandamiendurand@free.fr>]
  - AST.pm: fix for sharedir
  - bin/idl2moose: fix for -o option
  - bin/idl2moose: fix example
 
-0.001 2014-08-09T09:26:39
+0.001 2014-08-09T09:26:39Z
  [Jean-Damien Durand <jeandamiendurand@free.fr>]
  - Release of version 0.001
  - For initial release
