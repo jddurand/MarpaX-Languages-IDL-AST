@@ -92,15 +92,15 @@
    "provides" : {
       "MarpaX::Languages::IDL::AST" : {
          "file" : "lib/MarpaX/Languages/IDL/AST.pm",
-         "version" : "0.004"
+         "version" : "0.005"
       },
       "MarpaX::Languages::IDL::AST::Util" : {
          "file" : "lib/MarpaX/Languages/IDL/AST/Util.pm",
-         "version" : "0.004"
+         "version" : "0.005"
       },
       "MarpaX::Languages::IDL::AST::Value" : {
          "file" : "lib/MarpaX/Languages/IDL/AST/Value.pm",
-         "version" : "0.004"
+         "version" : "0.005"
       }
    },
    "release_status" : "stable",
@@ -116,6 +116,6 @@
          "web" : "https://github.com/jddurand/marpax-languages-idl-ast"
       }
    },
-   "version" : "0.004"
+   "version" : "0.005"
 }
 
