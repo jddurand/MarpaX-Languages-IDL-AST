@@ -703,7 +703,7 @@ class_has '[% identifier %]' => (is => 'ro', isa => [% constType %], default => 
   [%~ dummy = elementSpecMany.split("\0").join("\n") ~%]
   [%~ # Note: we add a method identifier that will return one of the members ~%]
   [%~ PROCESS _addMoosexParamsValidateToCurrentScope ~%]
-  [%~ input_validated_list = 'my ($discriminator) = pos_validated_list(\@_, {isa => ' _ switchTypeSpec _ '});' ~%]
+  [%~ input_validated_list = 'my ($discriminator) = pos_validated_list(\@_, {isa => ' _ switchTypeSpec _ '}, MX_PARAMS_VALIDATE_ALLOW_EXTRA => 1);' ~%]
   [%~ dummy = dummy _ "\n" _ 'sub ' _ identifier _ '{ my $self = shift; ' _ input_validated_list ~%]
   [%~ # Note: we want the "else" to only appear at the end, if any ~%]
   [%~ else = '' ~%]
