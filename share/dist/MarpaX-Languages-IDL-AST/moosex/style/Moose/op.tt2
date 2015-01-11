@@ -6,7 +6,8 @@
   [%~ paramTypeSpec.push(parameter.split(' ').first) ~%]
 [%~ END ~%] 
 [%~ IF (parameters.size > 0) ~%]
-  [%~ pos_validated_list = 'my (' _ parameters.join(',') _ ') = pos_validated_list(\\@_, ' ~%]
+  [%~ info_validated_list = '# my (' _ parameters.join(',') _ ') =' ~%]
+  [%~ pos_validated_list = 'pos_validated_list(\\@_, ' ~%]
   [%~ FOREACH parameter IN parameters ~%]
     [%~ index = loop.index() ~%]
     [%~ IF (index > 0) ~%]
@@ -16,17 +17,19 @@
   [%~ END ~%]
   [%~ pos_validated_list = pos_validated_list _ ', MX_PARAMS_VALIDATE_ALLOW_EXTRA => 1);' ~%]
 [%~ ELSE ~%]
+  [%~ info_validated_list = '# No explicit argument in input' ~%]
   [%~ pos_validated_list = '' ~%]
 [%~ END ~%]
 [%~ IF (opTypeSpec != 'void') ~%]
-   [%~ rc_validated_list = 'return pos_validated_list([ $self->$orig(' _ parameters.join(',') _ ') ], {isa => ' _ opTypeSpec _ '}, MX_PARAMS_VALIDATE_ALLOW_EXTRA => 1);' ~%]
+   [%~ rc_validated_list = 'return pos_validated_list([ $self->$orig(@_) ], {isa => ' _ opTypeSpec _ '}, MX_PARAMS_VALIDATE_ALLOW_EXTRA => 1);' ~%]
 [%~ ELSE ~%]
-   [%~ rc_validated_list = '$self->$orig(' _ parameters.join(',') _ '); return undef;' ~%]
+   [%~ rc_validated_list = '$self->$orig(@_); return undef;' ~%]
 [%~ END ~%]
 requires '[% identifier %]';
 around '[% identifier %]' => sub {
   my \$orig = shift;
   my \$self = shift;
+  [% info_validated_list %]
   [% pos_validated_list %]
   [% rc_validated_list %]
 };
