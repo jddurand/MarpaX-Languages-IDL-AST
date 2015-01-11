@@ -1,6 +1,13 @@
 Changelog for MarpaX-Languages-IDL-AST
 
-0.003 2015-01-09T19:15:25
+0.004 2015-01-11T00:52:12
+ [Jean-Damien Durand <jeandamiendurand@free.fr>]
+ - When validating parameters, allow extra parameters in the Moose
+   implementation
+ - etc: oups, wrong repo...
+ - etc/m4.idl: IDL t+
+
+0.003 2015-01-09T19:15:25Z
  [Jean-Damien Durand <jeandamiendurand@free.fr>]
  - share/dist/MarpaX-Languages-IDL-AST/moosex.tt2: removed unused block
    enumTypeOrig
