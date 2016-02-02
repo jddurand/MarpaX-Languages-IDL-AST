@@ -32,7 +32,6 @@ use Carp qw/carp croak/;
 use Marpa::R2 qw//;
 use File::Basename qw/basename fileparse/;
 use File::Spec::Functions qw/case_tolerant rel2abs/;
-use File::Slurp qw/read_file/;
 
 our $BLESS_PACKAGE = 'IDL::AST';
 our $DATA = do {local $/; <DATA>};
@@ -100,7 +99,7 @@ This method returns $self.
 =cut
 
 sub parse {
-    my ($self, $path, $hashOptPtr) = @_;
+    my ($self, $input, $hashOptPtr) = @_;
     #
     # Parameters check
     #
@@ -113,26 +112,38 @@ sub parse {
         delete($hashOptPtr->{$_});
       }
     }
-    #
-    # IDL wants the filename to end with .idl
-    #
-    my ($filename, $directories, $suffix) = fileparse($path, qr/\.[^.]*/);
-    if ((  case_tolerant() && (lc($suffix) ne '.idl')) ||
-        (! case_tolerant() && (   $suffix  ne '.idl'))) {
-      carp "$path does not end with .idl";
+    my $datap;
+    if (! ref($input)) {
+      #
+      # Assume this is a filename
+      # IDL wants the filename to end with .idl
+      #
+      my ($filename, $directories, $suffix) = fileparse($input, qr/\.[^.]*/);
+      if ((  case_tolerant() && (lc($suffix) ne '.idl')) ||
+          (! case_tolerant() && (   $suffix  ne '.idl'))) {
+        carp "$input does not end with .idl";
+      }
+      #
+      # Load data
+      #
+      open(my $fh, '<', $input) || croak "Failed to open $input, $!";
+      my $data = do { local $/; <$fh> };
+      close($fh) || warn "Failed to close $input, $!";
+      $datap = \$data;
+    } else {
+      #
+      # Assume this is the data to parse
+      #
+      $datap = $input;
     }
     #
-    # Load data
-    #
-    my $data = read_file($path);
-    #
-    # Regonizer
+    # Recognizer
     #
     my $recce = Marpa::R2::Scanless::R->new({grammar => $G,
                                              # trace_terminals => 1,
                                              semantics_package => 'MarpaX::Languages::IDL::AST::Value',
                                              %{$hashOptPtr}});
-    $recce->read(\$data);
+    $recce->read($datap);
     #
     # AST value
     #
