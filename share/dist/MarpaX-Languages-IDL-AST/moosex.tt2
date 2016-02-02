@@ -154,11 +154,32 @@ BEGIN {
       # ~%]
   [%~ stringLiteralArray = [] ~%]
   [%~ FOR stringLiteralUnit IN array ~%]
-    [%~ stringLiteral = PROCESS "STRINGLITERALUNIT" array=stringLiteralUnit ~%]
+    [%~ stringLiteral = INCLUDE "STRINGLITERALUNIT" array=stringLiteralUnit ~%]
     [%~ stringLiteralArray.push(stringLiteral) ~%]
   [%~ END ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 [% stringLiteralArray.join(' . ') %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                            wideStringLiteral                               ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "wideStringLiteral" ~%]
+  [%~ #
+      # <wideStringLiteral> ::= WIDESTRINGLITERALUNIT+
+      #
+      # ~%]
+  [%~ wideStringLiteralArray = [] ~%]
+  [%~ FOR wideStringLiteralUnit IN array ~%]
+    [%~ wideStringLiteral = INCLUDE "WIDESTRINGLITERALUNIT" array=wideStringLiteralUnit ~%]
+    [%~ wideStringLiteral = wideStringLiteral.replace('^L', '') ~%]
+    [%~ wideStringLiteralArray.push(wideStringLiteral) ~%]
+  [%~ END ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% wideStringLiteralArray.join(' . ') %]
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
