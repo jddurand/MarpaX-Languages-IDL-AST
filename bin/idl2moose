@@ -7,6 +7,8 @@ use Getopt::Long;
 use Pod::Usage;
 use POSIX qw/EXIT_FAILURE EXIT_SUCCESS/;
 use IO::String;
+use File::BOM qw/open_bom/;
+use Encode;
 
 # ABSTRACT: IDL to perl's Moose translation
 
@@ -16,12 +18,24 @@ use IO::String;
 
 my $help = 0;
 my $input = undef;
+my $encoding_input = undef;
+my $encoding_output = undef;
 my $output = undef;
 my $nativeFloat = 1;
+my $bom_output = 1;
 
+# -------
+# Options
+# -------
 GetOptions ('help!' => \$help,
+
             'input=s' => \$input,
+            'encoding_input|ei=s' => \$encoding_input,
+
             'output=s' => \$output,
+            'encoding_output|eo=s' => \$encoding_output,
+            'bom_output|bo!' => \$bom_output,
+
             'nativeFloat!' => \$nativeFloat);
 
 if ($help || ! $input) {
@@ -30,16 +44,39 @@ if ($help || ! $input) {
     pod2usage(-verbose => 2, -noperldoc => 1, -input => $podfh, -exitval => $help ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
-my $obj = MarpaX::Languages::IDL::AST->new();
-my $r = $obj->parse($input);
-my $result = $r->generate()->output();
-
-if ($output) {
-    open(OUTPUT, '>', $output) || die "Cannot open $output, $!";
-    print OUTPUT $result;
-    close(OUTPUT) || warn "Cannot close $output, $!";
+# --------------------------------------------------------
+# Read input, eventually with BOM and encoding as fallback
+# --------------------------------------------------------
+my $fh;
+if (defined($encoding_input)) {
+    open_bom($fh, $input, ':$encoding_input');  # Will respect BOö if any, fallback to encoding_input, croak on failure
 } else {
-    print $result;
+    open($fh, '<:via(File::BOM)', $input) || die "Cannot open $input, $!";
+}
+my $data = do { local $/; <$fh> };
+close($fh) || warn "Failed to close $input, $!";
+
+# ----------
+# Get result
+# ----------
+my $result = MarpaX::Languages::IDL::AST->new->parse(\$data)->generate->output;
+
+# ----------------------------------------
+# Output, eventually with encoding and BOM
+# ----------------------------------------
+$encoding_output //= $encoding_input;
+my $encoding = '';
+$encoding .= ":raw:encoding($encoding_output)" if (defined($encoding_output)); # :raw removes the CRLF mess
+$encoding .= ":via(File::BOM)"                 if ($bom_output);               # BOM ?
+if ($output) {
+    open(my $fh, ">$encoding", $output) || die "Cannot open $output, $!";
+    print $fh $result;
+    close($fh) || warn "Cannot close $output";
+} else {
+    if ($encoding) {
+        binmode(STDOUT, $encoding) || die "Cannot set encoding $encoding_output on STDOUT";
+    }
+    print STDOUT $result;
 }
 
 exit(EXIT_SUCCESS);
