@@ -23,7 +23,7 @@
 [%~ IF (opTypeSpec != 'void') ~%]
    [%~ rc_validated_list = 'return pos_validated_list([ $self->$orig(@_) ], {isa => ' _ opTypeSpec _ '}, MX_PARAMS_VALIDATE_ALLOW_EXTRA => 1);' ~%]
 [%~ ELSE ~%]
-   [%~ rc_validated_list = '$self->$orig(@_); return undef;' ~%]
+   [%~ rc_validated_list = '$self->$orig(@_); return;' ~%]
 [%~ END ~%]
 requires '[% identifier %]';
 around '[% identifier %]' => sub {
