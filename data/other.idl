@@ -1,4 +1,4 @@
-import "toto";
+import "toto" "2";
 import x;
 module M {
   typedef long ArgType;

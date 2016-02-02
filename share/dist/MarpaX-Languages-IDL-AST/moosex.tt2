@@ -79,9 +79,28 @@
       #                              |   <stringLiteral>
       # ~%]
   [%~ importedScope = INCLUDE _process processArg0=array.0 | trim ~%]
+  [%~ argumentBlessed = ScalarUtil.blessed(array.0) ~%]
+  [%~ IF (! argumentBlessed.defined) ~%]
+    [%~ THROW importedScope "Bad argument: rhs is not blessed" ~%]  
+  [%~ END ~%]
+  [%~ argumentBlessedName = argumentBlessed.split('::').last ~%]
+  [%~ SWITCH argumentBlessedName ~%]
+    [%~ CASE 'scopedName' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-use [% importedScope %];
+BEGIN {
+  eval "use [% importedScope %]; 1;" || die @_ ## nocritic
+}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+    [%~ CASE 'stringLiteral' ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+BEGIN {
+  my \$stringLiteral = [% importedScope %];
+  eval "use \$stringLiteral; 1;" || die @_ ## nocritic
+}
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+    [%~ CASE ~%]
+      [%~ THROW importedScope "Bad argument: must be blessed to scopedName, or stringLiteral of " _ argumentBlessedName ~%]  
+  [%~ END ~%]
   [%~ processSubtree = 0 %]
 [%~ END ~%]
 
@@ -123,6 +142,26 @@ use [% importedScope %];
 [%~ BLOCK "anyType"             ~%][%~ PROCESS _baseTypeSpec basetypeArg0='_anyType'             ~%][%~ END ~%]
 [%~ BLOCK "objectType"          ~%][%~ PROCESS _baseTypeSpec basetypeArg0='_objectType'          ~%][%~ END ~%]
 [%~ BLOCK "valueBaseType"       ~%][%~ PROCESS _baseTypeSpec basetypeArg0='_valueBaseType'       ~%][%~ END ~%]
+
+[%~ # .......................................................................... ~%]
+[%~ #                              stringLiteral                                 ~%]
+[%~ # .......................................................................... ~%]
+
+[%~ BLOCK "stringLiteral" ~%]
+  [%~ #
+      # <stringLiteral> ::= STRINGLITERALUNIT+
+      #
+      # ~%]
+  [%~ stringLiteralArray = [] ~%]
+  [%~ FOR stringLiteralUnit IN array ~%]
+    [%~ stringLiteral = PROCESS "STRINGLITERALUNIT" array=stringLiteralUnit ~%]
+    [%~ stringLiteralArray.push(stringLiteral) ~%]
+  [%~ END ~%]
+[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
+[% stringLiteralArray.join(' . ') %]
+[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
+  [%~ processSubtree = 0 ~%]
+[%~ END ~%]
 
 [%~ # .......................................................................... ~%]
 [%~ #                             templateTypeSpec                               ~%]
@@ -929,7 +968,8 @@ use [% matches.0.replace('\.idl', '') %];
   [%~ # ######################################################################## ~%]
   [%~ # Scan the AST using a stack-light model                                   ~%]
   [%~ #                                                                          ~%]
-  [%~ # Input: processArg0          an AST LHS blessed item                      ~%]
+  [%~ # Input: processArg0          LHS name                                     ~%]
+  [%~ #        processArg1          RHSs                                         ~%]
   [%~ #                                                                          ~%]
   [%~ # At every LHS, an PROCESS will be called i.e.:                            ~%]
   [%~ #                             PROCESS $lhs array                           ~%]
