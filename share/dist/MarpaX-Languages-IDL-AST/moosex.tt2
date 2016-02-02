@@ -706,7 +706,7 @@ has '[% declarator %]' => (is => 'rw', as => [% typeSpec %]);
   [%~ PROCESS _addUseToCurrentNamespace useToCurrentScopeArg0='MooseX::ClassAttribute' ~%]
   [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='do {' _ constExp _ '}' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-class_has '[% identifier %]' => (is => 'ro', isa => [% constType %], default => \$[% identifier %]);
+class_has '[% identifier %]' => (is => 'ro', isa => [% constType %], default => sub { \$[% identifier %] });
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ processSubtree = 0 ~%]
 [%~ END ~%]
