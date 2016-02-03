@@ -1,0 +1,8 @@
+[%~ SWITCH type ~%]
+  [%~ CASE ['ArrayRef', 'Int'] ~%]
+    [%~ PROCESS _addMoosexTypesMooseToCurrentScope moosexTypesMooseArg0=type ~%]
+  [%~ CASE 'Dict' ~%]
+    [%~ PROCESS _addMoosexTypesStructuredToCurrentScope addMoosexTypesStructuredToCurrentScopeArg0=type ~%]
+  [%~ CASE ~%]
+    [%~ PROCESS _addMoosexTypesToCurrentScope moosexTypesArg0=type ~%]
+[%~ END ~%]
