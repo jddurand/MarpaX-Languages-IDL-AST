@@ -49,7 +49,7 @@ if ($help || ! $input) {
 # --------------------------------------------------------
 my $fh;
 if (defined($encoding_input)) {
-    open_bom($fh, $input, ':$encoding_input');  # Will respect BOö if any, fallback to encoding_input, croak on failure
+    open_bom($fh, $input, ':$encoding_input');  # Will respect BOM if any, fallback to encoding_input, croak on failure
 } else {
     open($fh, '<:via(File::BOM)', $input) || die "Cannot open $input, $!";
 }
