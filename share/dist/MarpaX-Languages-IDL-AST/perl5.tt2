@@ -792,7 +792,8 @@ has '[% declarator %]' => (is => 'rw', as => [% typeSpec %]);
   [%~ constExp = INCLUDE _process processArg0=array.4 | trim ~%]
   [%~ useBaseTypes = PROCESS "useBaseTypes.tt2" | trim ~%]
   [%~ PROCESS _addUseToCurrentNamespace useToCurrentScopeArg0=useBaseTypes ~%]
-  [%~ PROCESS _addUseToCurrentNamespace useToCurrentScopeArg0='MooseX::ClassAttribute' ~%]
+  [%~ useClassAttribute = PROCESS "useClassAttribute.tt2" | trim ~%]
+  [%~ PROCESS _addUseToCurrentNamespace useToCurrentScopeArg0=useClassAttribute ~%]
   [%~ PROCESS _printScopedname scopednameArg0=identifier scopednameArg1='do {' _ constExp _ '}' ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
 class_has '[% identifier %]' => (is => 'ro', isa => [% constType %], default => sub { \$[% identifier %] });
