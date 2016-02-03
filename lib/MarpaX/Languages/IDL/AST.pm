@@ -31,7 +31,7 @@ This module provide and manage an AST of an IDL file, as per OMG's IDL 3.5 gramm
 use Carp qw/carp croak/;
 use Marpa::R2 qw//;
 use File::Basename qw/basename fileparse/;
-use File::Spec::Functions qw/case_tolerant rel2abs/;
+use File::Spec::Functions qw/case_tolerant rel2abs catdir/;
 
 our $BLESS_PACKAGE = 'IDL::AST';
 our $DATA = do {local $/; <DATA>};
@@ -217,18 +217,33 @@ sub generate {
     $template          //= 'moosex.tt2';
     $targetOptionHashp //= {};
 
+    #
+    # We provide a default style only if this is a template we know about
+    #
+    my $style  = $targetOptionHashp->{style};
+    my $addDefaultStyleInIncludePath = '';
+    my $packageDist = __PACKAGE__;
+    $packageDist =~ s/::/-/g;
+    my $distDir = dist_dir($packageDist);
+    if (! defined($style)) {
+      if ($template eq 'moosex.tt2') {
+        $style = 'Moose';
+        $addDefaultStyleInIncludePath = catdir($distDir, 'moosex', 'style', $style);
+      }
+    }
+
     if (ref($targetOptionHashp) ne 'HASH') {
 	croak '3rd argument must be a pointer to HASH';
     }
 
-    my $packageDist = __PACKAGE__;
-    $packageDist =~ s/::/-/g;
-    my $distDir = dist_dir($packageDist);
     my $ttOptionHashp = $targetOptionHashp->{tt};
     $ttOptionHashp->{STRICT} //= 1;
     $ttOptionHashp->{DELIMITER} //= $Config{path_sep};
     $ttOptionHashp->{INCLUDE_PATH} //= '';
     $ttOptionHashp->{INCLUDE_PATH} .= $ttOptionHashp->{DELIMITER} . $distDir;
+    if ($addDefaultStyleInIncludePath) {
+      $ttOptionHashp->{INCLUDE_PATH} .= $ttOptionHashp->{DELIMITER} . $addDefaultStyleInIncludePath;
+    }
     $ttOptionHashp->{INTERPOLATE} //= 1;
     $ttOptionHashp->{EVAL_PERL} //= 1;
     $ttOptionHashp->{PRE_CHOMP} //= CHOMP_NONE;
@@ -247,7 +262,7 @@ sub generate {
     #
     $ttVarsHashp->{ast} //= $ast;
     $ttVarsHashp->{nativeFloat} = $targetOptionHashp->{nativeFloat} // 1;
-    $ttVarsHashp->{style} = $targetOptionHashp->{style} // 'Moose';
+    $ttVarsHashp->{style} = $style;
 
     $self->{_output} = '';
     $tt->process($template, $ttVarsHashp, \$self->{_output}) || croak $tt->error();
