@@ -198,7 +198,7 @@ AST as produced by the method $self->parse(). Default to $self->ast().
 
 =item $template
 
-Template-Toolkit template name. Default to 'moosex.tt2', available in this distribution.
+Template-Toolkit template name. Default to 'perl5.tt2', available in this distribution.
 
 =item $targetOptionHashp
 
@@ -214,7 +214,7 @@ sub generate {
     my ($self, $ast, $template, $targetOptionHashp) = @_;
 
     $ast               //= $self->ast();
-    $template          //= 'moosex.tt2';
+    $template          //= 'perl5.tt2';
     $targetOptionHashp //= {};
 
     #
@@ -226,9 +226,9 @@ sub generate {
     $packageDist =~ s/::/-/g;
     my $distDir = dist_dir($packageDist);
     if (! defined($style)) {
-      if ($template eq 'moosex.tt2') {
+      if ($template eq 'perl5.tt2') {
         $style = 'Moose';
-        $addDefaultStyleInIncludePath = catdir($distDir, 'moosex', 'style', $style);
+        $addDefaultStyleInIncludePath = catdir($distDir, 'perl5', 'style', $style);
       }
     }
 
