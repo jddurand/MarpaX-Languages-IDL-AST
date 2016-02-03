@@ -32,7 +32,7 @@
   [%~ pos_validated_list = '' ~%]
 [%~ END ~%]
 [%~ IF (opArg1 != 'void') ~%]
-   [%~ rc_validated_list = 'return pos_validated_list([ $self->$orig(@_) ], {isa => ' _ opTypeSpec _ '}, MX_PARAMS_VALIDATE_ALLOW_EXTRA => 1);' ~%]
+   [%~ rc_validated_list = 'return pos_validated_list([ $self->$orig(@_) ], {isa => ' _ opTypeSpec _ '}, MX_PARAMS_VALIDATE_ALLOW_EXTRA => 1, MX_PARAMS_VALIDATE_CACHE_KEY => \'' _ opArg6 _ '::' _ opArg2 _ '\');' ~%]
 [%~ ELSE ~%]
    [%~ rc_validated_list = '$self->$orig(@_); return;' ~%]
 [%~ END ~%]

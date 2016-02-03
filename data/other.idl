@@ -1,4 +1,4 @@
-import "toto" "2";
+import L"ﬞtoto";
 import x;
 module M {
   typedef long ArgType;
@@ -23,4 +23,11 @@ interface B : A {
     ArgType x;            // x is a long
     A::ArgType y;         // y is a string
   };
+
+  union Date switch (short) { 
+  case 1: string stringFormat;
+  case 2: long digitalFormat; 
+  default: DateStructure structFormat; 
+  }; 
+
 };
