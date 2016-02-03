@@ -1,7 +1,18 @@
+[%~ # .......................................................................... ~%]
+[%~ #                                    op                                      ~%]
+[%~ #                                                                            ~%]
+[%~ # Parameters:                                                                ~%]
+[%~ # opArg0=opAttributeMaybe                                                    ~%]
+[%~ # opArg1=opTypeSpec                                                          ~%]
+[%~ # opArg2=identifier                                                          ~%]
+[%~ # opArg3=parameterDcls                                                       ~%]
+[%~ # opArg4=raisesExprMaybe                                                     ~%]
+[%~ # opArg5=contextExprMaybe                                                    ~%]
+[%~ # .......................................................................... ~%]
 [%~ PROCESS _addMoosexParamsValidateToCurrentScope ~%]
 [%~ parameters = [] ~%]
 [%~ paramTypeSpec = [] ~%]
-[%~ FOREACH parameter IN parameterDcls.split(',') ~%]
+[%~ FOREACH parameter IN opArg3.split(',') ~%]
   [%~ parameters.push('$' _ parameter.split(' ').last) ~%]
   [%~ paramTypeSpec.push(parameter.split(' ').first) ~%]
 [%~ END ~%] 
@@ -20,13 +31,13 @@
   [%~ info_validated_list = '# No explicit argument in input' ~%]
   [%~ pos_validated_list = '' ~%]
 [%~ END ~%]
-[%~ IF (opTypeSpec != 'void') ~%]
+[%~ IF (opArg1 != 'void') ~%]
    [%~ rc_validated_list = 'return pos_validated_list([ $self->$orig(@_) ], {isa => ' _ opTypeSpec _ '}, MX_PARAMS_VALIDATE_ALLOW_EXTRA => 1);' ~%]
 [%~ ELSE ~%]
    [%~ rc_validated_list = '$self->$orig(@_); return;' ~%]
 [%~ END ~%]
-requires '[% identifier %]';
-around '[% identifier %]' => sub {
+requires '[% opArg2 %]';
+around '[% opArg2 %]' => sub {
   my \$orig = shift;
   my \$self = shift;
   [% info_validated_list %]
