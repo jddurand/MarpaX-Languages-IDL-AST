@@ -26,6 +26,7 @@
   [%~ CASE 'TILDE'                 ~%]~
   [%~ CASE 'TRUE'                  ~%]!!1
   [%~ CASE 'FALSE'                 ~%]!!0
+  [%~ #~ void is NOT supported by perl - still we propagate it and catch up in op.tt2 ~%]
   [%~ CASE 'VOID'                  ~%]void
   [%~ #~ ------- ~%]
   [%~ #~ Default ~%]
