@@ -1,0 +1,34 @@
+[%~ SWITCH tokenName ~%]
+  [%~ # ------------------- ~%]
+  [%~ # Tokens with a value ~%]
+  [%~ # ------------------- ~%]
+  [%~ CASE 'scopedName'            ~%]\$[%~ tokenValue ~%]
+  [%~ CASE 'IDENTIFIER'            ~%]  [%~ tokenValue ~%]
+  [%~ CASE 'STRINGLITERALUNIT'     ~%]  [%~ tokenValue ~%]
+  [%~ CASE 'WIDESTRINGLITERALUNIT' ~%]  [%~ tokenValue ~%]
+  [%~ CASE 'CHARACTERLITERAL'      ~%]  [%~ tokenValue ~%]
+  [%~ CASE 'WIDECHARACTERLITERAL'  ~%]  [%~ tokenValue ~%]
+  [%~ CASE 'ICONSTANT'             ~%]  [%~ tokenValue ~%]
+  [%~ CASE 'CPPSTYLEDIRECTIVE'     ~%]  [%~ tokenValue ~%]
+  [%~ # -------------------- ~%]
+  [%~ # Tokens without value ~%]
+  [%~ # -------------------- ~%]
+  [%~ CASE 'OR'                    ~%]|
+  [%~ CASE 'XOR'                   ~%]^
+  [%~ CASE 'AND'                   ~%]&
+  [%~ CASE 'RSHIFT'                ~%]>>
+  [%~ CASE 'LSHIFT'                ~%]<<
+  [%~ CASE 'PLUS'                  ~%]+
+  [%~ CASE 'MINUS'                 ~%]-
+  [%~ CASE 'MUL'                   ~%]*
+  [%~ CASE 'DIV'                   ~%]/
+  [%~ CASE 'MOD'                   ~%]%
+  [%~ CASE 'TILDE'                 ~%]~
+  [%~ CASE 'TRUE'                  ~%]!!1
+  [%~ CASE 'FALSE'                 ~%]!!0
+  [%~ CASE 'VOID'                  ~%]void
+  [%~ #~ ------- ~%]
+  [%~ #~ Default ~%]
+  [%~ #~ ------- ~%]
+  [%~ CASE ~%]
+[%~ END ~%]
