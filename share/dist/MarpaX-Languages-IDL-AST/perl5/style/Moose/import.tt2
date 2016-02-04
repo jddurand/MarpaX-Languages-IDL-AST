@@ -1,0 +1,12 @@
+[%~ SWITCH importType ~%]
+  [%~ CASE 'scopedName' ~%]
+BEGIN {
+  eval "use [% importValue %]; 1;" || die @_ ## nocritic
+}
+  [%~ CASE 'stringLiteral' ~%]
+BEGIN {
+  my \$stringLiteral = [% importValue %];
+  eval "use \$stringLiteral; 1;" || die @_ ## nocritic
+}
+  [%~ CASE ~%]
+[%~ END ~%]

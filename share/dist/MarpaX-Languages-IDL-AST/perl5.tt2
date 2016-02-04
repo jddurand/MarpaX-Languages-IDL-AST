@@ -99,23 +99,7 @@
     [%~ THROW importedScope "Bad argument: rhs is not blessed" ~%]  
   [%~ END ~%]
   [%~ argumentBlessedName = argumentBlessed.split('::').last ~%]
-  [%~ SWITCH argumentBlessedName ~%]
-    [%~ CASE 'scopedName' ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-BEGIN {
-  eval "use [% importedScope %]; 1;" || die @_ ## nocritic
-}
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-    [%~ CASE 'stringLiteral' ~%]
-[%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-BEGIN {
-  my \$stringLiteral = [% importedScope %];
-  eval "use \$stringLiteral; 1;" || die @_ ## nocritic
-}
-[%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
-    [%~ CASE ~%]
-      [%~ THROW importedScope "Bad argument: must be blessed to scopedName, or stringLiteral of " _ argumentBlessedName ~%]  
-  [%~ END ~%]
+  [%~ PROCESS "import.tt2" importType=argumentBlessedName importValue=importedScope | trim ~%]
   [%~ processSubtree = 0 %]
 [%~ END ~%]
 
