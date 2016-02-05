@@ -24,7 +24,7 @@ package [% identifier %] {
       [%~ importType = import.0 ~%]
       [%~ importValue = import.1 ~%]
       [%~ # In our case, the same method pplies to scopedName and stringliteral (which are possible values or importType) ~%]
-     load_class([% importValue %])->import(qw/:all/);
+     load_class([% importValue %]);
     }
     [%~ END ~%]
   [%~ END ~%]
