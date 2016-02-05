@@ -199,7 +199,7 @@
   [%~ IF array.size == 6 ~%]
     [%~ positiveIntConst = INCLUDE _process processArg0=array.4 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-ArrayRef[[% simpleTypeSpec %]], where => {scalar(@_) <= [% positiveIntConst %]}
+ArrayRef[[% simpleTypeSpec %]], where => sub {scalar(@_) <= [% positiveIntConst %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ ELSE ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
@@ -223,7 +223,7 @@ ArrayRef[[% simpleTypeSpec %]]
   [%~ IF array.size == 4 ~%]
     [%~ positiveIntConst = INCLUDE _process processArg0=array.2 | trim ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
-_wideStringType, where => {length(\$_) <= [% positiveIntConst %]}
+_wideStringType, where => sub {length(\$_) <= [% positiveIntConst %]}
 [%#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%]
   [%~ ELSE ~%]
 [%#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>~%]
@@ -572,7 +572,7 @@ has '[% localIdentifier %]' => (is => 'rw', isa => [% localType %]);
 [%~ #                              arrayDeclarator                               ~%]
 [%~ # .......................................................................... ~%]
 
-[%~ BLOCK "arrayDeclaratorX" ~%]
+[%~ BLOCK "arrayDeclarator" ~%]
   [%~ #
       # <arrayDeclarator>            ::= <identifier> <fixedArraySizeMany>
       # ~%]
@@ -1334,14 +1334,14 @@ our \$[% scopednameArg0 %] = [% scopednameArg1 %];
   [%~ IF (idlContext.MemberMode > 0) ~%]
     [%~ IF (size.length > 0) ~%]
       [%~ PROCESS "useSpecializedType.tt2" type='ArrayRef' currentFullyQualifiedScopedName=currentFullyQualifiedScopedName ~%]
-subtype({ as => ArrayRef[[% declaratorToTypeArg1 %]], where => {scalar(@_) <= ([%~ size ~%])} })
+subtype({ as => ArrayRef[[% declaratorToTypeArg1 %]], where => sub {scalar(@_) <= ([%~ size ~%])} })
     [%~ ELSE ~%]
 [% declaratorToTypeArg1 %]
     [%~ END ~%]
   [%~ ELSE ~%]
     [%~ IF (size.length > 0) ~%]
       [%~ PROCESS "useSpecializedType.tt2" type='ArrayRef' currentFullyQualifiedScopedName=currentFullyQualifiedScopedName ~%]
-subtype([% identifier %], { as => ArrayRef[[% declaratorToTypeArg1 %]], where => {scalar(@_) <= ([%~ size ~%])} })
+subtype([% identifier %], { as => ArrayRef[[% declaratorToTypeArg1 %]], where => sub {scalar(@_) <= ([%~ size ~%])} })
     [%~ ELSE ~%]
 subtype([% identifier %], { as => [% declaratorToTypeArg1 %] })
     [%~ END ~%]
