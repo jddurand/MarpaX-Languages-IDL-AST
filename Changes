@@ -1,6 +1,36 @@
 Changelog for MarpaX-Languages-IDL-AST
 
-0.005 2015-01-11T01:19:05
+0.006 2016-02-05T05:29:24
+ [Jean-Damien Durand <jeandamiendurand@free.fr>]
+ - dist.ini: more prereqs that AutoPrereqs cannot guess
+ - perl5.tt2: where => sub {} instead of where => {}
+ - _declaratorToIdentifier & _declaratorToType
+ - import.tt2
+ - Cosmetic typos
+ - Comment about the void keyword
+ - Tokens externalization
+ - Add MX_PARAMS_VALIDATE_CACHE_KEY to pos_validated_list() calls
+ - say an OO style is required
+ - posValidatedList bis
+ - useClassAttribute
+ - useSpecializedType
+ - useBaseTypes again
+ - initGlobalVariables and initNameSpace
+ - useBaseTypes.tt2
+ - moosex renamed to perl5
+ - follow INCLUDE_PATH
+ - op.tt2: more generic
+ - op.tt2 dev+
+ - bin/idl2moose: xF6 character in source -;
+ - Moose/op.tt2: return; instead of return undef;
+ - bin/idl2moose: encoding issues
+ - IDL/AST.pm: support string in input
+ - moosex.tt2: wideStringLiteral
+ - stringLiteral fix detected for "import" directive
+ - moosex.tt2: dev+ prefer sub {} for default
+ - moosex.tt2: dev+ fixed for arraysized declarator
+
+0.005 2015-01-11T01:19:05Z
  [Jean-Damien Durand <jeandamiendurand@free.fr>]
  - Always do $self->$orig(@_) in Moose implementation
 
@@ -116,4 +146,3 @@ Changelog for MarpaX-Languages-IDL-AST
  - dev+
  - dev+
  - dev+
-

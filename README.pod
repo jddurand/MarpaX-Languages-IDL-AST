@@ -8,7 +8,7 @@ MarpaX::Languages::IDL::AST - Translate an IDL source to an AST
 
 =head1 VERSION
 
-version 0.005
+version 0.006
 
 =head1 SYNOPSIS
 
@@ -81,7 +81,7 @@ AST as produced by the method $self->parse(). Default to $self->ast().
 
 =item $template
 
-Template-Toolkit template name. Default to 'moosex.tt2', available in this distribution.
+Template-Toolkit template name. Default to 'perl5.tt2', available in this distribution.
 
 =item $targetOptionHashp
 
