@@ -2,3 +2,4 @@
 [%~ moosexTypesMoosePerScope={} ~%]
 [%~ moosexParamsValidatePerScope={} ~%]
 [%~ moosexTypesStructuredPerScope={} ~%]
+[%~ rememberImports=[] ~%]

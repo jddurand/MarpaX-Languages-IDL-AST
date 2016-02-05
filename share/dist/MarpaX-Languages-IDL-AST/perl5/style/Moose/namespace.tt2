@@ -15,6 +15,19 @@ package [% identifier %] {
   use [% (namespaceTypePerscope.$identifier == 'class') ? 'Moose' : 'Moose::Role' %];
   use MRO::Compat;
   use namespace::sweep;
+  [%~ # Every package is independant, this is why we have to redo the import ~%]
+  [%~ # We explicitly do that only inside a perl package, in order not to pollute main ~%]
+  [%~ IF (rememberImports.size > 0) ~%]
+    use Class::Load qw/load_class/;
+    BEGIN {
+    [%~ FOREACH import IN rememberImports ~%]
+      [%~ importType = import.0 ~%]
+      [%~ importValue = import.1 ~%]
+      [%~ # In our case, the same method pplies to scopedName and stringliteral (which are possible values or importType) ~%]
+     load_class([% importValue %])->import(qw/:all/);
+    }
+    [%~ END ~%]
+  [%~ END ~%]
 [%~ END ~%]
 [%~ FOREACH use IN usePerScope.$identifier ~%]
   use [% use %];
