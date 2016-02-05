@@ -1262,6 +1262,7 @@ use [% matches.0.replace('\.idl', '') %];
   [%~ PROCESS "initNameSpace.tt2" identifier=fullname ~%]
   [%~ withPerScope.$fullname = [] # The with ordering can be important ~%]
   [%~ usePerScope.$fullname = [] ~%]
+  [%~ scopednamePerscope.$fullname={} ~%]
 [%~ END ~%]
 
 [%~ BLOCK "_closeLastNameSpace" ~%]
