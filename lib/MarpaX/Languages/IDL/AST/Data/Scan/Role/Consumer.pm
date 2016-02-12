@@ -9,7 +9,7 @@ package MarpaX::Languages::IDL::AST::Data::Scan::Role::Consumer;
 
 # AUTHORITY
 
-use Data::Scan; # 0.003;      # no requires 'output'
+use Data::Scan 0.003;      # no requires 'output'
 use Moo::Role;
 use Scalar::Util qw/blessed reftype/;
 use Types::Standard -all;
