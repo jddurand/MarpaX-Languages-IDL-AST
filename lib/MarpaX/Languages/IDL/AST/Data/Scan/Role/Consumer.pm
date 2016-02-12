@@ -46,7 +46,7 @@ sub _rule {
 #
 # We require an additional output method
 #
-requires 'output';
+requires 'outputDir';
 #
 # Though we totally consume Data::Scan::Role::Consumer
 #
