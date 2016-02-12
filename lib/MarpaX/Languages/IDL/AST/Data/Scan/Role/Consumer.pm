@@ -17,11 +17,11 @@ use Types::Common::Numeric -all;
 #
 # We provide all the required method from Data::Scan::Role::Consumer
 #
-sub start  {}
-sub end    {}
-sub sopen  {}
-sub sread  { my ($self, $item) = @_; return $item if ($self->isRule($item)); return }
-sub sclose {}
+sub dsstart {}
+sub dsopen  {}
+sub dsread  { my ($self, $item) = @_; return $item if ($self->isRule($item)); return }
+sub dsclose {}
+sub dsend   {}
 #
 # We provide these handy method for our consumer
 #
