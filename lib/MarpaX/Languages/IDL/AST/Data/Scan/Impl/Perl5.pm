@@ -3,7 +3,7 @@ use warnings FATAL => 'all';
 
 package MarpaX::Languages::IDL::AST::Data::Scan::Impl::Perl5;
 
-# ABSTRACT: IDL translation to Perl5
+# ABSTRACT: Perl5 default implementation consumer of MarpaX::Languages::IDL::AST::Role::Consumer
 
 # VERSION
 
@@ -11,7 +11,6 @@ package MarpaX::Languages::IDL::AST::Data::Scan::Impl::Perl5;
 
 use Moo;
 
-with 'MarpaX::Languages::IDL::AST::Data::Scan::Role::Consumer';
+extends 'MarpaX::Languages::IDL::AST::Data::Scan::Impl::_Default';
 
 1;
-
