@@ -79,17 +79,17 @@ foreach my $type (keys %INT_RANGES) {
 declare IDL_charType,
   as Str,
   where {
-    return (length($_) == 1) && (ord(substr($_, 0, 1)) <= 255)
+    return (length($_) == 1) && (ord($_) <= 255)
   },
   inline_as {
     my ($constraint, $varname) = @_;
-    return $constraint->parent->inline_check($varname) . " && (length($varname) == 1) && (ord(substr($varname, 0, 1)) <= 255)"
+    return $constraint->parent->inline_check($varname) . " && (length($varname) == 1) && (ord($varname) <= 255)"
   },
   message {
     return Str->get_message($_) if ! Str->check($_);
     my $oups;
-    return "length must be 1 instead of $oups" if ($oups = length($_)) != 1;
-    return "ordinal must be <= 255 instead of ".  sprintf('0x%x', $oups) if ($oups = ord(substr($_, 0, 1))) > 255;
+    return "length must be 1 instead of $oups" if (($oups = length($_)) != 1);
+    return "ordinal must be <= 255 instead of ".  sprintf('0x%x', $oups) if (($oups = ord($_)) > 255);
     return 'Unknown reason (!?)'
   };
 
