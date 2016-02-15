@@ -28,7 +28,21 @@ use MooX::HandlesVia;
 use Scalar::Util qw/blessed reftype/;
 use Types::Standard -all;
 use Types::Common::Numeric -all;
-
+#
+# External attributes
+#
+has level => (is => 'rwp', isa => PositiveOrZeroInt, trigger => 1);
+sub _trigger_level {
+  my ($self) = @_;
+  #
+  # I suppose having not more then 999 levels in an IDL is ok -;
+  # No consequence if I am wrong.
+  #
+  $self->_logger->tracef('[Level %3d] %s%s', $self->level, '  ' x $self->level, $self->globalScope)
+};
+#
+# Internal attributes
+#
 has _default_root  => (is => 'rw', isa => ArrayRef[Str],
                        handles_via => 'Array',
                        handles => {
@@ -37,6 +51,15 @@ has _default_root  => (is => 'rw', isa => ArrayRef[Str],
                                    _splice_default_root => 'splice'
                                   }
                       );
+after _push_default_root => sub {
+  my ($self) = @_;
+  $self->_set_level($self->level + 1)
+};
+after _splice_default_root => sub {
+  my ($self) = @_;
+  $self->_set_level($self->level - 1)
+};
+
 has _default_scope => (is => 'rw', isa => ArrayRef[Str],
                        handles_via => 'Array',
                        handles => {
@@ -45,6 +68,15 @@ has _default_scope => (is => 'rw', isa => ArrayRef[Str],
                                    _splice_default_scope => 'splice'
                                   }
                       );
+after _push_default_scope => sub {
+  my ($self) = @_;
+  $self->_set_level($self->level + 1)
+};
+after _splice_default_scope => sub {
+  my ($self) = @_;
+  $self->_set_level($self->level - 1)
+};
+
 has _default_context => (is => 'rw', isa => ArrayRef[Any],
                          handles_via => 'Array',
                          handles => {
@@ -104,6 +136,7 @@ sub dsstart {
   $self->_default_scope([]);
   $self->_default_context([]);
   $self->_default_unnamedScopeCounter(0);
+  $self->_set_level(0);
 
   return
 }
@@ -265,7 +298,6 @@ sub dsopen  {
     }
   }
 
-  $self->_logger->debugf('%s: %s', $blessed, $self->globalScope) if ($pushed);
   return
 }
 
@@ -328,7 +360,6 @@ sub dsclose   {
     }
   }
   $self->_pop_default_context;
-  $self->_logger->debugf('%s: %s', $blessed, $self->globalScope) if ($spliced);
   return
 }
 sub process { return }
