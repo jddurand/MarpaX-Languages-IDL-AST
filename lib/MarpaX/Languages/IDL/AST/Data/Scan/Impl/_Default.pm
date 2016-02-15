@@ -32,8 +32,8 @@ use Types::Common::Numeric -all;
 # External attributes
 #
 has level => (is => 'rwp', isa => PositiveOrZeroInt, trigger => 1);
-sub _trigger_level { my $self = shift; return $self->trigger_level }   # To make the trigger
-sub trigger_level {                                                    # around'able -;
+sub _trigger_level { my $self = shift; return $self->trigger_level(@_) } # To make the trigger
+sub trigger_level {                                                      # around'able -;
   my ($self) = @_;
   #
   # I suppose having not more then 999 levels in an IDL is ok -;
