@@ -24,7 +24,12 @@ use constant {
 
 extends 'MarpaX::Languages::IDL::AST::Data::Scan::Impl::_Default';
 
-has main      => (is => 'ro', isa => Str, default => sub { 'IDL' } );
+has main      => (is => 'rwp', isa => Str, default => sub { 'IDL' }, trigger => 1 );
+sub _trigger_main {
+  my ($self, $main) = @_;
+  $self->_logger->debugf('main namespace is now %s', $main);
+  return
+}
 has indent    => (is => 'ro', isa => Str, default => sub { '  ' } );
 has separator => (is => 'ro', isa => Str, default => sub { ' ' } );
 has newline   => (is => 'ro', isa => Str, default => sub { "\n" } );
@@ -90,9 +95,32 @@ around dsread => sub {
   # [ start, length, value ]
   #
   my $blessed = blessed($item) // '';
+  $blessed =~ s/.*:://;
   my $reftype = reftype($item) // '';
   my $isLexeme = $blessed && $reftype eq 'ARRAY' && scalar(@{$item}) == 3 && ! grep { ref } @{$item};
-
+  #
+  # Derive using blessed information
+  #
+  # ------------------------------------
+  if ($blessed eq 'CPPSTYLEDIRECTIVE') {
+    # ----------------------------------
+    my $token = $item->[LEXEME_VALUE];
+    #
+    # We support only the #pragma prefix
+    #
+    if ($token =~ /#pragma\s+prefix\s"([^"]+)\"/) {
+      my $pragma = substr($token, $-[1], $+[1] - $-[1]);
+      my $newPragma = $pragma;
+      $newPragma =~ s/\./::/g;
+      $self->_set_main($self->main . '::' . $newPragma);
+    } else {
+      $self->_logger->infof('Ignored: %s', $token)
+    }
+  }
+  # --------------------------
+  if ($blessed eq 'TYPEDEF') {
+    # ------------------------
+  }
   if ($isLexeme) {
     my $token = $item->[LEXEME_VALUE];
     push(@{$self->_lines->[-1]}, $token);
