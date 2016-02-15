@@ -315,7 +315,7 @@ lexeme default = action => [ start, length, value ] latm => 1 bless => ::name
 
 :start ::= <specification>
 
-<specification>              ::= <supportedCppCommandAny> <importAny> <definitionMany>
+<specification>              ::= <supportedCppCommandAny> <importAny> <definitionMany> <supportedCppCommandAny>
 <supportedCppCommandAny>     ::= <supportedCppCommand>*
 <supportedCppCommand>        ::= CPPSTYLEDIRECTIVE
 <definition>                 ::= <typeDcl> SEMICOLON
