@@ -10,19 +10,40 @@ package MarpaX::Languages::IDL::AST::Data::Scan::Impl::Perl5;
 # AUTHORITY
 
 use Moo;
-use MarpaX::Languages::IDL::AST::Data::Scan::Impl::Perl5::_Perl5Types -all;
+use MarpaX::Languages::IDL::AST::Data::Scan::Impl::Perl5::_BaseTypes -all;
 use Types::Standard -all;
+use Types::Common::Numeric -all;
 
 extends 'MarpaX::Languages::IDL::AST::Data::Scan::Impl::_Default';
 
-has _packages => (is => 'rw', isa => HashRef[Perl5_packageType]);
+has main => (is => 'ro', isa => Str, default => sub { 'IDL' } );
+has _lines => (is => 'rw', isa => ArrayRef[Str]);
+has _level => (is => 'rw', isa => PositiveOrZeroInt);
 
-around dsstart => sub {
+#
+# We do not want to pollute perl5's main namespace
+#
+around globalScope => sub {
   my ($orig, $self) = @_;
 
-  $self->_packages({});
+  my $globalScope = $self->$orig;
 
-  return $self->$orig()
+  if ($globalScope =~ /^::/) {
+    $globalScope = join('', $self->main, $globalScope)
+  } else {
+    $globalScope = $globalScope ? join('::', $self->main, $globalScope) : $self->main
+  }
+
+  return $globalScope
+};
+
+around dsstart => sub {
+  my ($orig, $self, $item) = @_;
+
+  $self->_lines([]);
+  $self->_level(0);
+
+  return $self->$orig($item)
 };
 
 around dsopen => sub {
@@ -41,12 +62,6 @@ around dsclose => sub {
   my ($orig, $self, $item) = @_;
 
   return $self->$orig($item)
-};
-
-around dsend => sub {
-  my ($orig, $self) = @_;
-
-  return $self->$orig()
 };
 
 1;
