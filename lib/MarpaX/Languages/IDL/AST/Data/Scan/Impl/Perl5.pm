@@ -16,10 +16,16 @@ use Types::Common::Numeric -all;
 
 extends 'MarpaX::Languages::IDL::AST::Data::Scan::Impl::_Default';
 
-has main => (is => 'ro', isa => Str, default => sub { 'IDL' } );
-has _lines => (is => 'rw', isa => ArrayRef[Str]);
-has _level => (is => 'rw', isa => PositiveOrZeroInt);
+has main   => (is => 'ro', isa => Str, default => sub { 'IDL' } );
+has indent => (is => 'ro', isa => Str, default => sub { '  ' } );
 
+has _lines => (is => 'rw', isa => ArrayRef[Str]);
+around trigger_level => sub {
+  my ($orig, $self, $level) = @_;
+
+  push(@{$self->_lines}, $self->indent x $self->level);
+  return $self->$orig($level)
+};
 #
 # We do not want to pollute perl5's main namespace
 #
@@ -41,7 +47,6 @@ around dsstart => sub {
   my ($orig, $self, $item) = @_;
 
   $self->_lines([]);
-  $self->_level(0);
 
   return $self->$orig($item)
 };
