@@ -363,8 +363,6 @@ sub dsclose   {
   $self->_pop_default_context;
   return
 }
-sub process { return }
-sub output  { return }
 #
 # We just provide a default dsread that is capable to distinguish lexemes and
 # to unfold when necessary

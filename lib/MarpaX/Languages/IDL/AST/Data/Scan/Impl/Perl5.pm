@@ -11,21 +11,46 @@ package MarpaX::Languages::IDL::AST::Data::Scan::Impl::Perl5;
 
 use Moo;
 use MarpaX::Languages::IDL::AST::Data::Scan::Impl::Perl5::_BaseTypes -all;
+use Scalar::Util qw/blessed reftype/;
 use Types::Standard -all;
 use Types::Common::Numeric -all;
 
+use constant {
+  LEXEME_START => $[,
+  LEXEME_LENGTH => $[ + 1,
+  LEXEME_VALUE => $[ + 2,
+  SEMICOLON => ';'
+};
+
 extends 'MarpaX::Languages::IDL::AST::Data::Scan::Impl::_Default';
 
-has main   => (is => 'ro', isa => Str, default => sub { 'IDL' } );
-has indent => (is => 'ro', isa => Str, default => sub { '  ' } );
+has main      => (is => 'ro', isa => Str, default => sub { 'IDL' } );
+has indent    => (is => 'ro', isa => Str, default => sub { '  ' } );
+has separator => (is => 'ro', isa => Str, default => sub { ' ' } );
+has newline   => (is => 'ro', isa => Str, default => sub { "\n" } );
 
-has _lines => (is => 'rw', isa => ArrayRef[Str]);
-around trigger_level => sub {
-  my ($orig, $self, $level) = @_;
+has _lines => (is => 'rw', isa => ArrayRef[ArrayRef[Str]]);
 
-  push(@{$self->_lines}, $self->indent x $self->level);
-  return $self->$orig($level)
+sub _pushLine {
+  my ($self) = @_;
+
+  push(@{$self->_lines}, [ $self->indent x $self->level ]);
+  return
+}
+after trigger_level => sub {
+  my ($self) = @_;
+
+  $self->_pushLine;
+  return
 };
+
+sub output {
+  my ($self) = @_;
+
+  my $separator = $self->separator;
+  return join($self->newline, map { join($separator, @{$_}) } @{$self->_lines});
+}
+
 #
 # We do not want to pollute perl5's main namespace
 #
@@ -59,6 +84,23 @@ around dsopen => sub {
 
 around dsread => sub {
   my ($orig, $self, $item) = @_;
+  #
+  # We identify a token like this:
+  # this is a blessed array containing only scalars
+  # [ start, length, value ]
+  #
+  my $blessed = blessed($item) // '';
+  my $reftype = reftype($item) // '';
+  my $isLexeme = $blessed && $reftype eq 'ARRAY' && scalar(@{$item}) == 3 && ! grep { ref } @{$item};
+
+  if ($isLexeme) {
+    my $token = $item->[LEXEME_VALUE];
+    push(@{$self->_lines->[-1]}, $token);
+    #
+    # We want the ';' colon to force a newline
+    #
+    $self->_pushLine if ($token eq SEMICOLON);
+  }
 
   return $self->$orig($item)
 };

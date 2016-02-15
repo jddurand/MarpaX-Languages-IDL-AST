@@ -225,7 +225,7 @@ sub generate {
     # Init log
     #
     our $defaultLog4perlConf = '
-log4perl.rootLogger              = TRACE, Screen
+log4perl.rootLogger              = DEBUG, Screen
 log4perl.appender.Screen         = Log::Log4perl::Appender::Screen
 log4perl.appender.Screen.stderr  = 0
 log4perl.appender.Screen.layout  = PatternLayout
@@ -236,6 +236,7 @@ log4perl.appender.Screen.layout.ConversionPattern = %d %-5p %6P %m{chomp}%n
     use MarpaX::Languages::IDL::AST::Data::Scan::Impl::Perl5;
     my $consumer = MarpaX::Languages::IDL::AST::Data::Scan::Impl::Perl5->new();
     Data::Scan->new(consumer => $consumer)->process($ast);
+    print STDERR $consumer->output;
     exit;
   }
     #
