@@ -39,7 +39,12 @@ has _lines => (is => 'rw', isa => ArrayRef[ArrayRef[Str]]);
 sub _pushLine {
   my ($self) = @_;
 
-  push(@{$self->_lines}, [ $self->indent x $self->level ]);
+  if ($self->level) {
+    push(@{$self->_lines}, [ $self->indent x $self->level ]);
+  } else {
+    push(@{$self->_lines}, [ ]);
+  }
+
   return
 }
 after trigger_level => sub {
@@ -125,9 +130,11 @@ around dsread => sub {
     my $token = $item->[LEXEME_VALUE];
     push(@{$self->_lines->[-1]}, $token);
     #
-    # We want the ';' colon to force a newline
+    # We want to force a newline if semicolon of CPP directive
     #
-    $self->_pushLine if ($token eq SEMICOLON);
+    if ($token eq SEMICOLON || $blessed eq 'CPPSTYLEDIRECTIVE') {
+      $self->_pushLine
+    }
   }
 
   return $self->$orig($item)
