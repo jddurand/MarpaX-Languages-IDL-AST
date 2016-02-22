@@ -24,7 +24,6 @@ This module provide and manage general notions of IDL, that are independant of t
 
 use Carp qw/croak/;
 use Moo;
-use MooX::HandlesVia;
 use Scalar::Util qw/blessed reftype/;
 use Types::Standard -all;
 use Types::Common::Numeric -all;
@@ -44,59 +43,19 @@ sub trigger_level {                                                      # aroun
 #
 # Internal attributes
 #
-has _default_root  => (is => 'rw', isa => ArrayRef[Str],
-                       handles_via => 'Array',
-                       handles => {
-                                   _push_default_root => 'push',
-                                   _join_default_root => 'join',
-                                   _splice_default_root => 'splice'
-                                  }
-                      );
-after _push_default_root => sub {
-  my ($self) = @_;
-  $self->_set_level($self->level + 1)
-};
-after _splice_default_root => sub {
-  my ($self) = @_;
-  $self->_set_level($self->level - 1)
-};
-
-has _default_scope => (is => 'rw', isa => ArrayRef[Str],
-                       handles_via => 'Array',
-                       handles => {
-                                   _push_default_scope => 'push',
-                                   _join_default_scope => 'join',
-                                   _splice_default_scope => 'splice'
-                                  }
-                      );
-after _push_default_scope => sub {
-  my ($self) = @_;
-  $self->_set_level($self->level + 1)
-};
-after _splice_default_scope => sub {
-  my ($self) = @_;
-  $self->_set_level($self->level - 1)
-};
-
-has _default_context => (is => 'rw', isa => ArrayRef[Any],
-                         handles_via => 'Array',
-                         handles => {
-                                     _push_default_context => 'push',
-                                     _pop_default_context => 'pop',
-                                     _count_default_context => 'count',
-                                     _get_default_context => 'get'
-                                    }
-                        );
+has _default_root                => (is => 'rw', isa => ArrayRef[Str]);
+has _default_scope               => (is => 'rw', isa => ArrayRef[Str]);
+has _default_context             => (is => 'rw', isa => ArrayRef[Any]);
 has _default_unnamedScopeCounter => (is => 'rw', isa => PositiveOrZeroInt);
 
 sub currentRoot {
   my ($self) = @_;
-  return $self->_join_default_root('')
+  return join('', @{$self->_default_root})
 }
 
 sub currentScope {
   my ($self) = @_;
-  return $self->_join_default_scope('')
+  return join('', @{$self->_default_scope})
 }
 
 sub globalName {
@@ -167,19 +126,20 @@ sub dsopen  {
   # Per def we dsopen() only blessed items, c.f. dsread()
   #
   my $blessed = $self->_blessed($item);
-  $self->_push_default_context($item);
+  push(@{$self->_default_context}, $item);
   my $pushed;
 
   if ($blessed eq 'LCURLY') {
     #
     # <module>                     ::= MODULE <identifier> LCURLY <definitionMany> RCURLY
     #
-    if ($self->_count_default_context >= 2 && $self->_blessed(my $module = $self->_get_default_context(-2)) eq 'module') {
+    if (scalar(@{$self->_default_context}) >= 2 && $self->_blessed(my $module = $self->_default_context->[-2]) eq 'module') {
       my $identifier = $module->[1];
       my $IDENTIFIER = $identifier->[0];
-      $pushed = $self->_push_default_root('::', $self->_token($IDENTIFIER))
+      $pushed = push(@{$self->_default_root}, '::', $self->_token($IDENTIFIER));
+      $self->_set_level($self->level + 1)
     }
-    elsif ($self->_count_default_context >= 2 && $self->_blessed(my $interfaceDcl = $self->_get_default_context(-2)) eq 'interfaceDcl') {
+    elsif (scalar(@{$self->_default_context}) >= 2 && $self->_blessed(my $interfaceDcl = $self->_default_context->[-2]) eq 'interfaceDcl') {
       #
       # <interfaceDcl>               ::= <interfaceHeader> LCURLY <interfaceBody> RCURLY
       # <interface>                  ::= <interfaceDcl>
@@ -189,17 +149,19 @@ sub dsopen  {
       my $interfaceHeader = $interfaceDcl->[0];
       my $identifier = $interfaceHeader->[2];
       my $IDENTIFIER = $identifier->[0];
-      $pushed = $self->_push_default_scope('::', $self->_token($IDENTIFIER))
+      $pushed = push(@{$self->_default_scope}, '::', $self->_token($IDENTIFIER));
+      $self->_set_level($self->level + 1)
     }
-    elsif ($self->_count_default_context >= 2 && $self->_blessed(my $valueAbsDcl = $self->_get_default_context(-2)) eq 'valueAbsDcl') {
+    elsif (scalar(@{$self->_default_context}) >= 2 && $self->_blessed(my $valueAbsDcl = $self->_default_context->[-2]) eq 'valueAbsDcl') {
       #
       # <valueAbsDcl>              ::= ABSTRACT VALUETYPE <identifier> <valueInheritanceSpecMaybe> LCURLY <exportAny> RCURLY
       #
       my $identifier = $valueAbsDcl->[2];
       my $IDENTIFIER = $identifier->[0];
-      $pushed = $self->_push_default_scope('::', $self->_token($IDENTIFIER))
+      $pushed = push(@{$self->_default_scope}, '::', $self->_token($IDENTIFIER));
+      $self->_set_level($self->level + 1)
     }
-    elsif ($self->_count_default_context >= 2 && $self->_blessed(my $valueDcl = $self->_get_default_context(-2)) eq 'valueDcl') {
+    elsif (scalar(@{$self->_default_context}) >= 2 && $self->_blessed(my $valueDcl = $self->_default_context->[-2]) eq 'valueDcl') {
       #
       # <valueDcl>                   ::= <valueHeader> LCURLY <valueElementAny> RCURLY
       # <valueHeader>                ::= <customMaybe> VALUETYPE <identifier> <valueInheritanceSpecMaybe>
@@ -207,33 +169,37 @@ sub dsopen  {
       my $valueHeader = $valueDcl->[0];
       my $identifier = $valueHeader->[2];
       my $IDENTIFIER = $identifier->[0];
-      $pushed = $self->_push_default_scope('::', $self->_token($IDENTIFIER))
+      $pushed = push(@{$self->_default_scope}, '::', $self->_token($IDENTIFIER));
+      $self->_set_level($self->level + 1)
     }
-    elsif ($self->_count_default_context >= 2 && $self->_blessed(my $structType = $self->_get_default_context(-2)) eq 'structType') {
+    elsif (scalar(@{$self->_default_context}) >= 2 && $self->_blessed(my $structType = $self->_default_context->[-2]) eq 'structType') {
       #
       # <structType>                 ::= STRUCT <identifier> LCURLY <memberList> RCURLY
       #
       my $identifier = $structType->[1];
       my $IDENTIFIER = $identifier->[0];
-      $pushed = $self->_push_default_scope('::', $self->_token($IDENTIFIER))
+      $pushed = push(@{$self->_default_scope}, '::', $self->_token($IDENTIFIER));
+      $self->_set_level($self->level + 1)
     }
-    elsif ($self->_count_default_context >= 2 && $self->_blessed(my $exceptDcl = $self->_get_default_context(-2)) eq 'exceptDcl') {
+    elsif (scalar(@{$self->_default_context}) >= 2 && $self->_blessed(my $exceptDcl = $self->_default_context->[-2]) eq 'exceptDcl') {
       #
       # <exceptDcl>                  ::= EXCEPTION <identifier> LCURLY <memberAny> RCURLY
       #
       my $identifier = $exceptDcl->[1];
       my $IDENTIFIER = $identifier->[0];
-      $pushed = $self->_push_default_scope('::', $self->_token($IDENTIFIER))
+      $pushed = push(@{$self->_default_scope}, '::', $self->_token($IDENTIFIER));
+      $self->_set_level($self->level + 1)
     }
-    elsif ($self->_count_default_context >= 2 && $self->_blessed(my $eventAbsDcl = $self->_get_default_context(-2)) eq 'eventAbsDcl') {
+    elsif (scalar(@{$self->_default_context}) >= 2 && $self->_blessed(my $eventAbsDcl = $self->_default_context->[-2]) eq 'eventAbsDcl') {
       #
       # <eventAbsDcl>                ::= ABSTRACT EVENTTYPE <identifier> <valueInheritanceSpecMaybe> LCURLY <exportAny> RCURLY
       #
       my $identifier = $eventAbsDcl->[2];
       my $IDENTIFIER = $identifier->[0];
-      $pushed = $self->_push_default_scope('::', $self->_token($IDENTIFIER))
+      $pushed = push(@{$self->_default_scope}, '::', $self->_token($IDENTIFIER));
+      $self->_set_level($self->level + 1)
     }
-    elsif ($self->_count_default_context >= 2 && $self->_blessed(my $eventDcl = $self->_get_default_context(-2)) eq 'eventDcl') {
+    elsif (scalar(@{$self->_default_context}) >= 2 && $self->_blessed(my $eventDcl = $self->_default_context->[-2]) eq 'eventDcl') {
       #
       # <eventDcl>                   ::= <eventHeader> LCURLY <valueElementAny> RCURLY
       # <eventHeader>                ::= <customMaybe> EVENTTYPE <identifier> <valueInheritanceSpecMaybe>
@@ -241,9 +207,10 @@ sub dsopen  {
       my $eventHeader = $eventDcl->[0];
       my $identifier = $eventHeader->[2];
       my $IDENTIFIER = $identifier->[0];
-      $pushed = $self->_push_default_scope('::', $self->_token($IDENTIFIER))
+      $pushed = push(@{$self->_default_scope}, '::', $self->_token($IDENTIFIER));
+      $self->_set_level($self->level + 1)
     }
-    elsif ($self->_count_default_context >= 2 && $self->_blessed(my $componentDcl = $self->_get_default_context(-2)) eq 'componentDcl') {
+    elsif (scalar(@{$self->_default_context}) >= 2 && $self->_blessed(my $componentDcl = $self->_default_context->[-2]) eq 'componentDcl') {
       #
       # <componentDcl>               ::= <componentHeader> LCURLY <componentBody> RCURLY
       # <componentHeader>            ::= COMPONENT <identifier> <componentInheritanceSpecMaybe> <supportedInterfaceSpecMaybe>
@@ -251,9 +218,10 @@ sub dsopen  {
       my $componentHeader = $componentDcl->[0];
       my $identifier = $componentHeader->[1];
       my $IDENTIFIER = $identifier->[0];
-      $pushed = $self->_push_default_scope('::', $self->_token($IDENTIFIER))
+      $pushed = push(@{$self->_default_scope}, '::', $self->_token($IDENTIFIER));
+      $self->_set_level($self->level + 1)
     }
-    elsif ($self->_count_default_context >= 3 && $self->_blessed(my $homeDcl = $self->_get_default_context(-3)) eq 'homeDcl') {
+    elsif (scalar(@{$self->_default_context}) >= 3 && $self->_blessed(my $homeDcl = $self->_get_default_context(-3)) eq 'homeDcl') {
       #
       # <homeBody>                   ::= LCURLY <homeExportAny> RCURLY
       # <homeDcl>                    ::= <homeHeader> <homeBody>
@@ -262,24 +230,26 @@ sub dsopen  {
       my $homeHeader = $homeDcl->[0];
       my $identifier = $homeHeader->[1];
       my $IDENTIFIER = $identifier->[0];
-      $pushed = $self->_push_default_scope('::', $self->_token($IDENTIFIER))
+      $pushed = push(@{$self->_default_scope}, '::', $self->_token($IDENTIFIER));
+      $self->_set_level($self->level + 1)
     }
   }
   elsif ($blessed eq 'LPAREN') {
-    if ($self->_count_default_context >= 2 && $self->_blessed(my $unionType = $self->_get_default_context(-2)) eq 'unionType') {
+    if (scalar(@{$self->_default_context}) >= 2 && $self->_blessed(my $unionType = $self->_default_context->[-2]) eq 'unionType') {
       #
       # <unionType>                  ::= UNION <identifier> SWITCH LPAREN <switchTypeSpec> RPAREN LCURLY <switchBody> RCURLY
       #
       my $identifier = $unionType->[1];
       my $IDENTIFIER = $identifier->[0];
-      $pushed = $self->_push_default_scope('::', $self->_token($IDENTIFIER))
+      $pushed = push(@{$self->_default_scope}, '::', $self->_token($IDENTIFIER));
+      $self->_set_level($self->level + 1)
     }
     #
     # Unnamed scopes
     #
-    elsif (($self->_count_default_context >= 2) &&
+    elsif ((scalar(@{$self->_default_context}) >= 2) &&
            do {
-             my $parentContext = $self->_blessed($self->_get_default_context(-2));
+             my $parentContext = $self->_blessed($self->_default_context->[-2]);
              grep {$_ eq $parentContext} qw/initDcl primaryExpr parameterDcls factoryDcl finderDcl/
            }
           ) {
@@ -295,7 +265,8 @@ sub dsopen  {
       # Make sure unnamed scoped is an invalid identifier
       my $unnamedScope = sprintf('[unnamedScope%d]', $unnamedScopeCounter);
       $self->_default_unnamedScopeCounter(++$unnamedScopeCounter);
-      $pushed = $self->_push_default_scope('::', $unnamedScope)
+      $pushed = push(@{$self->_default_scope}, '::', $unnamedScope);
+      $self->_set_level($self->level + 1)
     }
   }
 
@@ -310,8 +281,8 @@ sub dsclose   {
   my $spliced;
 
   if ($blessed eq 'RCURLY'                                        &&
-      $self->_count_default_context >= 2                                  &&
-      ($parentContext = $self->_blessed($self->_get_default_context(-2))) &&
+      scalar(@{$self->_default_context}) >= 2                                  &&
+      ($parentContext = $self->_blessed($self->_default_context->[-2])) &&
       grep { $parentContext eq $_} qw/module
                                       interfaceDcl
                                       valueAbsDcl
@@ -337,14 +308,15 @@ sub dsclose   {
     # <homeBody>                   ::= LCURLY <homeExportAny> RCURLY
     # <unionType>                  ::= UNION <identifier> SWITCH LPAREN <switchTypeSpec> RPAREN LCURLY <switchBody> RCURLY
     #
-    $spliced = ($parentContext eq 'module') ? $self->_splice_default_root(-2, 2) : $self->_splice_default_scope(-2, 2)
+    $spliced = ($parentContext eq 'module') ? splice(@{$self->_default_root}, -2, 2) : splice(@{$self->_default_scope}, -2, 2);
+    $self->_set_level($self->level - 1)
   }
   elsif ($blessed eq 'RPAREN') {
     #
     # Unnamed scopes
     #
-    if (($self->_count_default_context >= 2)                                &&
-        ($parentContext = $self->_blessed($self->_get_default_context(-2))) &&
+    if ((scalar(@{$self->_default_context}) >= 2)                                &&
+        ($parentContext = $self->_blessed($self->_default_context->[-2])) &&
         grep {$_ eq $parentContext} qw/initDcl primaryExpr parameterDcls factoryDcl finderDcl/
        ) {
       #
@@ -357,10 +329,11 @@ sub dsclose   {
       #
       my $unnamedScopeCounter = $self->_default_unnamedScopeCounter;
       $self->_default_unnamedScopeCounter(--$unnamedScopeCounter);
-      $spliced = $self->_splice_default_scope(-2, 2)
+      $spliced = splice(@{$self->_default_scope}, -2, 2);
+      $self->_set_level($self->level - 1)
     }
   }
-  $self->_pop_default_context;
+  pop(@{$self->_default_context});
   return
 }
 #
