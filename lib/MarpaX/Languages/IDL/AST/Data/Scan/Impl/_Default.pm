@@ -341,6 +341,13 @@ sub dsclose   {
 # to unfold when necessary.
 #
 my %G1 = ( specification => 1);
+#
+# Generate a dump default method for every required G1
+#
+foreach (keys %G1) {
+  eval "sub $_ {}";
+  croak "Failed to generate dump sub for $_, $@" if $@
+}
 
 sub dsread {
   my ($self, $item) = @_;
@@ -373,10 +380,6 @@ sub _token {
 
   return $item->[2]
 }
-
-sub specification {
-}
-
 
 with 'MarpaX::Languages::IDL::AST::Data::Scan::Role::Consumer';
 with 'MooX::Role::Logger';
