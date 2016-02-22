@@ -338,8 +338,10 @@ sub dsclose   {
 }
 #
 # We just provide a default dsread that is capable to distinguish lexemes and
-# to unfold when necessary
+# to unfold when necessary.
 #
+my %G1 = ( speficiation => 1);
+
 sub dsread {
   my ($self, $item) = @_;
   #
@@ -347,6 +349,12 @@ sub dsread {
   #
   my $blessed = $self->_blessed($item);
   my $rc = $blessed ? $item : undef;
+  #
+  # Per-rule implementations.
+  #
+  if (exists($G1{$blessed})) {
+    $self->$blessed($item)
+  }
 
   return $rc;
 }
@@ -366,12 +374,15 @@ sub _token {
   return $item->[2]
 }
 
-with 'Data::Scan::Role::Consumer';
+sub specification {
+}
+
+
+with 'MarpaX::Languages::IDL::AST::Data::Scan::Role::Consumer';
 with 'MooX::Role::Logger';
 
 1;
 __DATA__
-requires 'specification';
 requires 'supportedCppCommandAny';
 requires 'supportedCppCommand';
 requires 'definition';

@@ -24,26 +24,23 @@ use constant {
 
 extends 'MarpaX::Languages::IDL::AST::Data::Scan::Impl::_Default';
 
+has output    => (is => 'rwp', isa => Str);
 has main      => (is => 'rwp', isa => Str, default => sub { 'IDL' }, trigger => 1 );
+has indent    => (is => 'ro',  isa => Str, default => sub { '  ' } );
+has separator => (is => 'ro',  isa => Str, default => sub { ' ' } );
+has newline   => (is => 'ro',  isa => Str, default => sub { "\n" } );
+has _lines    => (is => 'rw',  isa => ArrayRef[ArrayRef[Str]]);
+
 sub _trigger_main {
   my ($self, $main) = @_;
   $self->_logger->debugf('main namespace is now %s', $main);
   return
 }
-has indent    => (is => 'ro', isa => Str, default => sub { '  ' } );
-has separator => (is => 'ro', isa => Str, default => sub { ' ' } );
-has newline   => (is => 'ro', isa => Str, default => sub { "\n" } );
-
-has _lines => (is => 'rw', isa => ArrayRef[ArrayRef[Str]]);
 
 sub _pushLine {
   my ($self) = @_;
 
-  if ($self->level) {
-    push(@{$self->_lines}, [ $self->indent x $self->level ]);
-  } else {
-    push(@{$self->_lines}, [ ]);
-  }
+  push(@{$self->_lines}, $self->level ? [ $self->indent x $self->level ] : [ ]);
 
   return
 }
@@ -53,13 +50,6 @@ after trigger_level => sub {
   $self->_pushLine;
   return
 };
-
-sub output {
-  my ($self) = @_;
-
-  my $separator = $self->separator;
-  return join($self->newline, map { join($separator, @{$_}) } @{$self->_lines});
-}
 
 #
 # We do not want to pollute perl5's main namespace
@@ -77,21 +67,32 @@ around globalScope => sub {
 
   return $globalScope
 };
-
+#
+# At startup initialize work area and result
+#
 around dsstart => sub {
   my ($orig, $self, $item) = @_;
 
   $self->_lines([]);
+  $self->_set_output('');
 
   return $self->$orig($item)
 };
+#
+# At end set result an reset work area
+#
+around dsend => sub {
+  my ($orig, $self) = @_;
 
-around dsopen => sub {
-  my ($orig, $self, $item) = @_;
+  my $separator = $self->separator;
+  $self->_set_output(join($self->newline, map { join($separator, @{$_}) } @{$self->_lines}));
+  $self->_lines([]);
 
-  return $self->$orig($item)
+  return $self->$orig
 };
-
+#
+# At dsopen, catch the need to push a new line
+#
 around dsread => sub {
   my ($orig, $self, $item) = @_;
   #
@@ -130,18 +131,12 @@ around dsread => sub {
     my $token = $item->[LEXEME_VALUE];
     push(@{$self->_lines->[-1]}, $token);
     #
-    # We want to force a newline if semicolon of CPP directive
+    # We want to force a newline if semicolon or CPP directive
     #
     if ($token eq SEMICOLON || $blessed eq 'CPPSTYLEDIRECTIVE') {
       $self->_pushLine
     }
   }
-
-  return $self->$orig($item)
-};
-
-around dsclose => sub {
-  my ($orig, $self, $item) = @_;
 
   return $self->$orig($item)
 };
