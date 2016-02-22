@@ -141,4 +141,7 @@ around dsread => sub {
   return $self->$orig($item)
 };
 
+around specification => sub { die "OK"
+};
+
 1;

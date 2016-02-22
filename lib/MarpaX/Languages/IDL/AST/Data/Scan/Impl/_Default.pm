@@ -340,7 +340,7 @@ sub dsclose   {
 # We just provide a default dsread that is capable to distinguish lexemes and
 # to unfold when necessary.
 #
-my %G1 = ( speficiation => 1);
+my %G1 = ( specification => 1);
 
 sub dsread {
   my ($self, $item) = @_;
