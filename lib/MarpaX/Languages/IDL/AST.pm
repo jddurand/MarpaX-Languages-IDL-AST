@@ -8,7 +8,7 @@ use Scalar::Util qw/blessed reftype refaddr/;
 use Data::Dumper;
 use Template;
 use Template::Constants qw/:chomp :debug/;
-use File::ShareDir::ProjectDistDir 1.0 ':all', strict => 1;
+use File::ShareDir qw/dist_dir/;
 use Config;
 use Data::Scan;
 
@@ -217,28 +217,6 @@ sub generate {
     $ast               //= $self->ast();
     $template          //= 'perl5.tt2';
     $targetOptionHashp //= {};
-  {
-    use Log::Log4perl qw/:easy/;
-    use Log::Any::Adapter;
-    use Log::Any qw/$log/;
-    #
-    # Init log
-    #
-    our $defaultLog4perlConf = '
-log4perl.rootLogger              = DEBUG, Screen
-log4perl.appender.Screen         = Log::Log4perl::Appender::Screen
-log4perl.appender.Screen.stderr  = 0
-log4perl.appender.Screen.layout  = PatternLayout
-log4perl.appender.Screen.layout.ConversionPattern = %d %-5p %6P %m{chomp}%n
-';
-    Log::Log4perl::init(\$defaultLog4perlConf);
-    Log::Any::Adapter->set('Log4perl');
-    use MarpaX::Languages::IDL::AST::Data::Scan::Impl::Perl5;
-    my $consumer = MarpaX::Languages::IDL::AST::Data::Scan::Impl::Perl5->new();
-    Data::Scan->new(consumer => $consumer)->process($ast);
-    print STDERR $consumer->output;
-    exit;
-  }
     #
     # We provide a default style only if this is a template we know about
     #
