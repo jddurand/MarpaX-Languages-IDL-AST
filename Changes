@@ -1,6 +1,41 @@
 Changelog for MarpaX-Languages-IDL-AST
 
-0.006 2016-02-05T05:29:24
+0.007 2017-04-12T18:32:26
+ [Jean-Damien Durand <jeandamiendurand@free.fr>]
+ - Switch to File::ShareDir, closes #1
+ - dev+
+ - Role/Consumer.pm
+ - Impl/_Default.pm: MooX::DefaultVia removal
+ - Impl/Perl5,pm: fix _pushLine
+ - Impl/Perl5.pm: CPPSTYLEDIRECTIVE
+ - IDL/AST.pm: Support cpp commands at the end
+ - dev+: default is the concatenation
+ - Impl/Perl5.pm: trigger_level call misses @_
+ - Impl/_Default.pm: Make trigger_level aroundable
+ - Impl/_Default.pm: Externalize trigger_level
+ - Impl/_Default.pm: Logging
+ - IDL/AST.pm: temporary code to test the Data::Scan implementation
+ - Impl/Perl5,pm: definition of the global namespace
+ - Impl/Perl5.pm: perl5 transpiling dev+
+ - Perl5/_Perl5Types.pm: Perl5 architectural types
+ - Impl/_Default.pm: Try to make sure internal attributes would not clash
+   with eventual subclasses
+ - Perl5/_BaseTypes.pm: IDL_charType optimization
+ - Perl5/_BaseTypes.pm: Type::Tiny version of IDL base types
+ - Role/Consumer.pm: Removed
+ - Data::Scan implementation: dev+
+ - Role/Consumer.pm: output -> outputDir
+ - Impl/Perl5.pm: template
+ - Role/Consumer.pm: Data::Scan::Role::Consumer API compliance
+ - Role/Consumer.pm: use Data::Scan 0.003
+ - Role/Consumer.pm: Data::Scan consumer
+ - perl5.tt2: init of scopednamePerscope.
+ - Moose/namespace.tt2: do not systematically import
+ - dist.ini: more prereqs
+ - import: dev+
+ - dist.ini: Unparsable version for Win32::ShellQuote
+
+0.006 2016-02-05T05:29:24Z
  [Jean-Damien Durand <jeandamiendurand@free.fr>]
  - dist.ini: more prereqs that AutoPrereqs cannot guess
  - perl5.tt2: where => sub {} instead of where => {}
